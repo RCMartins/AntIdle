@@ -1,8 +1,9 @@
 package pt.rcmartins.antidle.utils
 
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.model.AntBrood
-import pt.rcmartins.antidle.utils.Utils.AllData
+import pt.rcmartins.antidle.game.Constants
+import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.model.{AntBrood, AntTask}
 
 object TickUpdater {
 
@@ -22,7 +23,7 @@ object TickUpdater {
               case other =>
                 Right(other)
             }
-          val newWorkers = updatedEggsAndLarvae.count(_.isLeft)
+          val newWorkers = updatedEggsAndLarvae.count(_.isLeft) * u
 
           allData
             .modify(_.ants.eggsAndLarvae)
@@ -32,6 +33,15 @@ object TickUpdater {
             .modify(_.unlocks.bornFirstWorker)
             .setToIf(newWorkers > 0)(true)
         },
+        allData => {
+          def countWorkers(task: AntTask): Long =
+            allData.ants.tasks.find(_._1 == task).map(_._2 / u).getOrElse(0L)
+
+          val sugarWorkers: Long = countWorkers(AntTask.SugarCollector)
+          allData.giveResources(
+            sugars = sugarWorkers * Constants.DefaultTaskCollectSugarTick,
+          )
+        }
       )
 
     updates

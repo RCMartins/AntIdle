@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.model
 
+import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model.Chamber._
 
 case class NestAttributes(
@@ -20,9 +21,9 @@ object NestAttributes {
       dirt = 0,
       deadAnts = 0,
       detritus = 0,
-      maxSugars = 1000,
-      maxEggs = 2,
-      maxWorkers = 5,
+      maxSugars = 1000 * u,
+      maxEggs = 2 * u,
+      maxWorkers = 5 * u,
     )
 
 }

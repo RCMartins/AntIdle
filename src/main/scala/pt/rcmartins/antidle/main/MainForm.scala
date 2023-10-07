@@ -1,27 +1,46 @@
 package pt.rcmartins.antidle.main
 
-import com.raquo.laminar.api.L._
-import com.raquo.laminar.codecs.StringAsIsCodec
+import com.raquo.laminar.api.L.{u => _, _}
+import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import com.raquo.laminar.nodes.ReactiveHtmlElement.Base
-import org.scalajs.dom.{HTMLButtonElement, HTMLDivElement}
-import pt.rcmartins.antidle.model.AntTask
+import org.scalajs.dom.{HTMLDivElement, MouseEvent}
+import pt.rcmartins.antidle.game.Constants._
+import pt.rcmartins.antidle.model.{ActionCost, AntTask}
 import pt.rcmartins.antidle.utils.Actions
+import pt.rcmartins.antidle.utils.UIUtils.{prettyNumber, prettyNumberInt}
 import pt.rcmartins.antidle.utils.Utils._
 
-import scala.scalajs.js
+import scala.util.chaining.scalaUtilChainingOps
 
 object MainForm {
 
-  private def createTooltip(title: String): Seq[Modifier[Base]] =
-    Seq(
-      htmlAttr("data-bs-toggle", StringAsIsCodec) := "tooltip",
-      htmlAttr("data-bs-placement", StringAsIsCodec) := "bottom",
-      htmlAttr("data-bs-title", StringAsIsCodec) := title,
-      onMountCallback { _ =>
-        js.Dynamic.global.initializeTooltips()
-      }
+  private val tooltipContent: Var[Signal[ReactiveHtmlElement[HTMLDivElement]]] = Var(Val(div()))
+  private val tooltipTarget: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
+  private val tooltipVisible: Var[Boolean] = Var(false)
+  private val tooltipX: Var[Int] = Var(0)
+  private val tooltipY: Var[Int] = Var(0)
+
+  private val tooltip =
+    div(
+      className := "card p-1",
+      position.absolute,
+      top.px <-- tooltipY.signal.distinct.map(_ - 15),
+      left.px <-- tooltipX.signal.distinct.map(_ + 50),
+      display <-- tooltipVisible.signal.distinct.map(if (_) "block" else "none").distinct,
+      child <-- tooltipContent.signal.flatten,
     )
+
+  private def setTooltip(
+      elem: ReactiveHtmlElement[HTMLDivElement],
+      contentSignal: Signal[ReactiveHtmlElement[HTMLDivElement]]
+  ): EventListener[MouseEvent, MouseEvent] =
+    onMouseEnter --> { _ =>
+      Var.set(
+        tooltipVisible -> true,
+        tooltipTarget -> elem,
+        tooltipContent -> contentSignal,
+      )
+    }
 
   private val ResourcesWidth = 500
   private val NestWidth = 800
@@ -43,6 +62,24 @@ object MainForm {
       div(
         messagesDiv,
       ),
+      onMouseMove --> (ev => {
+        Var.set(
+          tooltipX -> ev.clientX.toInt,
+          tooltipY -> ev.clientY.toInt,
+          tooltipVisible ->
+            tooltipTarget
+              .now()
+              .ref
+              .getBoundingClientRect()
+              .pipe { rect =>
+                ev.clientX >= rect.left &&
+                  ev.clientX <= rect.right &&
+                  ev.clientY >= rect.top &&
+                  ev.clientY <= rect.bottom
+              }
+        )
+      }),
+      tooltip
     )
   }
 
@@ -96,16 +133,6 @@ object MainForm {
           maxWorkers,
           unlocksSignal.map(_.bornFirstWorker)
         ),
-//        child.maybe <-- createResourceDiv(
-//          "Larvae",
-//          antsSignal.map(_.eggsAndLarvae.size),
-//          unlocksSignal.map(_.larvaeUnlocked)
-//        ),
-//        child.maybe <-- createResourceDiv(
-//          "Pupae",
-//          antsSignal.map(_.eggsAndLarvae.size),
-//          unlocksSignal.map(_.pupaeUnlocked)
-//        ),
       )
     )
 
@@ -123,23 +150,21 @@ object MainForm {
           div(
             className := "row",
             div(
-              className := "col-3 text-nowrap",
+              className := "col-4 text-nowrap",
               name,
             ),
             div(
               className := "col-3 text-end text-nowrap",
-              value,
+              prettyNumber(value),
             ),
             div(
-              className := "col-3 text-start text-body-tertiary text-nowrap",
+              className := "col-2 text-start text-body-tertiary text-nowrap ps-0",
               child <--
                 maxValueSignal.map { maxValue =>
                   if (maxValue == 0)
                     nbsp
                   else
-                    span(
-                      s"/$maxValue",
-                    )
+                    span("/", prettyNumber(maxValue))
                 },
             ),
             div(
@@ -171,7 +196,7 @@ object MainForm {
               className := "fs-4",
               `type` := "button",
               "Gather Sugar",
-              onClick --> { _ => giveResources(sugars = 1) }
+              onClick --> { _ => giveResources(sugars = PlayerGatherSugarClickAmount) }
             ),
           ),
           child.maybe <-- unlocksSignal.map(_.canLayEggs).map {
@@ -180,8 +205,10 @@ object MainForm {
             case true =>
               Some(
                 actionButton(
-                  "Lay Egg",
+                  id = "action-lay-egg",
+                  name = "Lay Egg",
                   Actions.layEggActionEnabled,
+                  Actions.layEggActionCost,
                   () => Actions.layEggAction(),
                 )
               )
@@ -191,11 +218,14 @@ object MainForm {
     )
 
   private def actionButton(
+      id: String,
       name: String,
       enabledSignal: Signal[Boolean],
+      costSignal: Signal[ActionCost],
       onClickAction: () => Unit,
   ): ReactiveHtmlElement[HTMLDivElement] =
     div(
+      idAttr := id,
       className := "col-6 p-2 d-grid",
       button(
         className := "btn btn-primary",
@@ -204,6 +234,13 @@ object MainForm {
         name,
         disabled <-- enabledSignal.map(!_),
         onClick --> { _ => onClickAction() },
+      ),
+    ).amendThis(elem =>
+      setTooltip(
+        elem,
+        costSignal.map { cost =>
+          div(s"Cost: ", prettyNumber(cost.sugars), " sugars")
+        }
       )
     )
 
@@ -221,44 +258,69 @@ object MainForm {
         className := "card-body",
         div(
           className := "d-grid gap-2",
+          span(
+            "Idle Ants: ",
+            b(child <-- idleWorkersCountSignal.map(prettyNumber)),
+          ),
           children <-- unlockedAntTasks.map(_.map(taskDiv)),
         )
       )
     )
 
-  def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] =
+  def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
+    val amountSignal =
+      antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
+    val id = s"task-${antTask.toString.toLowerCase}"
+
+    val tooltipSignal = antTask match {
+      case AntTask.Nursary =>
+        Val(div("???"))
+      case AntTask.SugarCollector =>
+        Val(div(s"+", prettyNumber(DefaultTaskCollectSugarSecond), " sugar per second / ant"))
+      case AntTask.WaterCollector =>
+        Val(div("???"))
+    }
+
     div(
-      className := "d-flex flex-fill justify-content-between",
+      idAttr := id,
+      className := "row",
       span(
+        className := "col-5",
         antTask match {
           case AntTask.Nursary        => "Nursary"
           case AntTask.SugarCollector => "Sugar Collector"
           case AntTask.WaterCollector => "Water Collector"
-        }
-      ),
-      span(
-        child.text <-- antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)),
+        },
         nbsp,
-        "/",
-        nbsp,
-        child.text <-- idleWorkersCountSignal,
+        "(",
+        child <-- amountSignal.map(prettyNumberInt),
+        ")",
       ),
       div(
+        className := "col-2",
         button(
           className := "btn btn-primary",
           className := "m-1",
-          `type` := "button",
-          "-",
-          onClick --> { _ => () }
+          cursor.pointer,
+          i(
+            className := "fa-solid fa-minus",
+          ),
+          disabled <-- amountSignal.map(_ == 0),
+          onClick --> { _ => Actions.reduceAntTask(antTask) }
         ),
         button(
           className := "btn btn-primary",
           className := "m-1",
-          `type` := "button",
-          "+",
-          onClick --> { _ => () }
+          cursor.pointer,
+          i(
+            className := "fa-solid fa-plus",
+          ),
+          disabled <-- idleWorkersCountSignal.map(_ == 0),
+          onClick --> { _ => Actions.incrementAntTask(antTask) }
         ),
-      )
-    )
+      ),
+      div(className := "col-5"),
+    ).amendThis(elem => setTooltip(elem, tooltipSignal))
+  }
 
 }

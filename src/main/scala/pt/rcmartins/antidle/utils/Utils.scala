@@ -1,8 +1,9 @@
 package pt.rcmartins.antidle.utils
 
 import com.raquo.airstream.ownership.OneTimeOwner
-import com.raquo.laminar.api.L._
+import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
+import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
 
 import scala.scalajs.js.timers.setInterval
@@ -19,38 +20,17 @@ object Utils {
   val unlocksData: Var[Unlocks] = Var(Unlocks())
   val unlocksSignal = unlocksData.signal.distinct
 
-  case class AllData(
-      world: WorldData,
-      queens: QueenData,
-      ants: AntsData,
-      basicResources: BasicResources,
-      nestAttributes: NestAttributes,
-      unlocks: Unlocks,
-  ) {
-
-    def updateVars(): Unit =
-      Var.set(
-        worldData -> world,
-        queensData -> queens,
-        antsData -> ants,
-        basicResourcesData -> basicResources,
-        nestAttributesData -> nestAttributes,
-        unlocksData -> unlocks,
-      )
-
-  }
-
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.tick).distinct
 
   val workersSignal: Signal[Long] = antsSignal.map(_.workers).distinct
   val eggsCountSignal: Signal[Long] =
-    antsSignal.map(_.eggsAndLarvae.count(_.isEgg).toLong).distinct
+    antsSignal.map(_.eggsAndLarvae.count(_.isEgg) * u).distinct
 
   val larvaeCountSignal: Signal[Long] =
-    antsSignal.map(_.eggsAndLarvae.count(_.isLarvae).toLong).distinct
+    antsSignal.map(_.eggsAndLarvae.count(_.isLarvae) * u).distinct
 
   val pupaeCountSignal: Signal[Long] =
-    antsSignal.map(_.eggsAndLarvae.count(_.isPupae).toLong).distinct
+    antsSignal.map(_.eggsAndLarvae.count(_.isPupae) * u).distinct
 
   val antAndBroodCount: Signal[Long] =
     workersSignal
@@ -61,7 +41,7 @@ object Utils {
       .distinct
 
   val unlockedAntTasks: Signal[Seq[AntTask]] = antsSignal.map(_.tasks.map(_._1)).distinct
-  val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount)
+  val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount).distinct
 
   val sugarsSignal: Signal[Long] = resourcesSignal.map(_.sugars).distinct
   val proteinsSignal: Signal[Long] = resourcesSignal.map(_.proteins).distinct
