@@ -1,6 +1,7 @@
 package pt.rcmartins.antidle.model
 
 import pt.rcmartins.antidle.model.WorldData._
+import zio.json._
 
 case class WorldData(
     tick: Long,
@@ -22,6 +23,9 @@ case class WorldData(
 }
 
 object WorldData {
+
+  implicit val decoder: JsonDecoder[WorldData] = DeriveJsonDecoder.gen[WorldData]
+  implicit val encoder: JsonEncoder[WorldData] = DeriveJsonEncoder.gen[WorldData]
 
   val TicksPerSecond: Long = 5
   val millsPerTick: Long = 1000 / TicksPerSecond

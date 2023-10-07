@@ -1,5 +1,7 @@
 package pt.rcmartins.antidle.model
 
+import zio.json._
+
 sealed trait AntBrood {
 
   def isEgg: Boolean
@@ -9,6 +11,9 @@ sealed trait AntBrood {
 }
 
 object AntBrood {
+
+  implicit val decoder: JsonDecoder[AntBrood] = DeriveJsonDecoder.gen[AntBrood]
+  implicit val encoder: JsonEncoder[AntBrood] = DeriveJsonEncoder.gen[AntBrood]
 
   case class Egg(
       tickOfEgg: Long,

@@ -17,7 +17,7 @@ object Utils {
   val basicResourcesData: Var[BasicResources] = Var(BasicResources.initial)
   val resourcesSignal = basicResourcesData.signal
   val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
-  val unlocksData: Var[Unlocks] = Var(Unlocks())
+  val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
   val unlocksSignal = unlocksData.signal.distinct
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.tick).distinct

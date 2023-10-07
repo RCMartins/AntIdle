@@ -1,5 +1,7 @@
 package pt.rcmartins.antidle.model
 
+import zio.json._
+
 case class AntsData(
     eggsAndLarvae: Seq[AntBrood],
     workers: Long,
@@ -18,6 +20,9 @@ case class AntsData(
 }
 
 object AntsData {
+
+  implicit val decoder: JsonDecoder[AntsData] = DeriveJsonDecoder.gen[AntsData]
+  implicit val encoder: JsonEncoder[AntsData] = DeriveJsonEncoder.gen[AntsData]
 
   val initial: AntsData =
     AntsData(

@@ -1,5 +1,7 @@
 package pt.rcmartins.antidle.model
 
+import zio.json._
+
 case class BasicResources(
     sugars: Long,
     proteins: Long,
@@ -9,6 +11,9 @@ case class BasicResources(
 )
 
 object BasicResources {
+
+  implicit val decoder: JsonDecoder[BasicResources] = DeriveJsonDecoder.gen[BasicResources]
+  implicit val encoder: JsonEncoder[BasicResources] = DeriveJsonEncoder.gen[BasicResources]
 
   val initial: BasicResources =
     BasicResources(

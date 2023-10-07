@@ -6,7 +6,7 @@ import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.{HTMLDivElement, MouseEvent}
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.model.{ActionCost, AntTask}
-import pt.rcmartins.antidle.utils.Actions
+import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
 import pt.rcmartins.antidle.utils.UIUtils.{prettyNumber, prettyNumberInt}
 import pt.rcmartins.antidle.utils.Utils._
 
@@ -60,6 +60,7 @@ object MainForm {
         child.maybe <-- antTasksUnlockedSignal.map { if (_) Some(tasksDiv) else None },
       ),
       div(
+        saveLoadDiv,
         messagesDiv,
       ),
       onMouseMove --> (ev => {
@@ -82,6 +83,34 @@ object MainForm {
       tooltip
     )
   }
+
+  def saveLoadDiv: ReactiveHtmlElement[HTMLDivElement] =
+    div(
+      className := "card",
+      div(
+        className := "row m-0",
+        button(
+          className := "btn btn-primary col-5 m-1",
+          className := "fs-4",
+          `type` := "button",
+          "Save",
+          onClick --> { _ =>
+            actionUpdater.writer.onNext(allData => allData.tap(SaveLoad.saveToLocalStorage))
+          }
+        ),
+        button(
+          className := "btn btn-primary col-5 m-1",
+          className := "fs-4",
+          `type` := "button",
+          "Load",
+          onClick --> { _ =>
+            SaveLoad
+              .loadFromLocalStorage()
+              .foreach(loadedAllData => actionUpdater.writer.onNext(_ => loadedAllData))
+          }
+        ),
+      )
+    )
 
   def messagesDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(

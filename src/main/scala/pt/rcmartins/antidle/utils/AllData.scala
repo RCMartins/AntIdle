@@ -4,6 +4,7 @@ import com.raquo.airstream.state.Var
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.model._
 import pt.rcmartins.antidle.utils.Utils._
+import zio.json._
 
 case class AllData(
     world: WorldData,
@@ -28,5 +29,12 @@ case class AllData(
       nestAttributesData -> nestAttributes,
       unlocksData -> unlocks,
     )
+
+}
+
+object AllData {
+
+  implicit val decoder: JsonDecoder[AllData] = DeriveJsonDecoder.gen[AllData]
+  implicit val encoder: JsonEncoder[AllData] = DeriveJsonEncoder.gen[AllData]
 
 }
