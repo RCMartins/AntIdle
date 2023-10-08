@@ -101,6 +101,7 @@ object Utils {
       .foreach { case (world, queen, ants, basic, next, unlocks) =>
         val allData = AllData(world, queen, ants, basic, next, unlocks)
         val passedTicks = world.getPassedTicks(System.currentTimeMillis())
+        // TODO deal with passedTicks > 100
         for (_ <- 1L to passedTicks) {
           TickUpdater.updateTick(allData)
         }
