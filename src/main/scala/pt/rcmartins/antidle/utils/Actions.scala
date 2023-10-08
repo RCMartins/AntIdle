@@ -45,7 +45,7 @@ object Actions {
         .modify(_.basicResources.sugars)
         .using(_ - Constants.EggSugarCost)
         .modify(_.ants.eggsAndLarvae)
-        .using(_ :+ AntBrood.Egg(allData.world.tick))
+        .using(_ :+ AntBrood.Egg(allData.world.currentTick))
         .modify(_.unlocks.layedFirstEgg)
         .setTo(true)
     }

@@ -7,12 +7,12 @@ import pt.rcmartins.antidle.model.{AntBrood, AntTask}
 
 object TickUpdater {
 
-  def updateTick(initial: AllData): Unit = {
+  def updateAllData(initial: AllData): AllData = {
     val updates: Seq[AllData => AllData] =
       Seq[AllData => AllData](
-        allData => allData.modify(_.world).using(_.tickBump()),
+        allData => allData.modify(_.world.currentTick).using(_ + 1),
         allData => {
-          val currentTick = allData.world.tick
+          val currentTick = allData.world.currentTick
           val unlocks = allData.unlocks
 
           val updatedEggsAndLarvae: Seq[Either[Unit, AntBrood]] =
@@ -44,11 +44,7 @@ object TickUpdater {
         }
       )
 
-    updates
-      .foldLeft(initial) { case (allData, update) =>
-        update(allData)
-      }
-      .updateVars()
+    updates.foldLeft(initial) { case (allData, update) => update(allData) }
   }
 
 }

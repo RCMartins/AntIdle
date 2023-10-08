@@ -3,9 +3,11 @@ package pt.rcmartins.antidle.utils
 import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
+import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
 
+import scala.annotation.tailrec
 import scala.scalajs.js.timers.setInterval
 
 object Utils {
@@ -20,7 +22,7 @@ object Utils {
   val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
   val unlocksSignal = unlocksData.signal.distinct
 
-  val currentTickSignal: Signal[Long] = worldData.signal.map(_.tick).distinct
+  val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
 
   val workersSignal: Signal[Long] = antsSignal.map(_.workers).distinct
   val eggsCountSignal: Signal[Long] =
@@ -84,9 +86,13 @@ object Utils {
       .sample(worldData)
       .foreach { world =>
         val passedTicks = world.getPassedTicks(System.currentTimeMillis())
-        for (_ <- 1L to passedTicks) {
-          ticksBus.writer.onNext(())
-        }
+        worldData.update(
+          _.modify(_.targetTick)
+            .using(_ + passedTicks)
+            .modify(_.lastUpdateTime)
+            .using(_ + WorldData.millsPerTick * passedTicks)
+        )
+        ticksBus.writer.onNext(())
       }(owner)
 
     ticksBus.events
@@ -99,11 +105,18 @@ object Utils {
         unlocksData,
       )
       .foreach { case (world, queen, ants, basic, next, unlocks) =>
-        val allData = AllData(world, queen, ants, basic, next, unlocks)
-        val passedTicks = world.getPassedTicks(System.currentTimeMillis())
-        // TODO deal with passedTicks > 100
-        for (_ <- 1L to passedTicks) {
-          TickUpdater.updateTick(allData)
+        val ticksToUpdate = world.targetTick - world.currentTick
+        if (ticksToUpdate > 0) {
+          val allData = AllData(world, queen, ants, basic, next, unlocks)
+
+          @tailrec
+          def loop(ticksLeft: Long, allData: AllData): AllData =
+            if (ticksLeft <= 0)
+              allData
+            else
+              loop(ticksLeft - 1, TickUpdater.updateAllData(allData))
+
+          loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
         }
       }(owner)
   }

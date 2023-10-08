@@ -4,7 +4,8 @@ import pt.rcmartins.antidle.model.WorldData._
 import zio.json._
 
 case class WorldData(
-    tick: Long,
+    currentTick: Long,
+    targetTick: Long,
     lastUpdateTime: Long,
 ) {
 
@@ -13,12 +14,6 @@ case class WorldData(
     val passedTicks = delta / millsPerTick
     passedTicks
   }
-
-  def tickBump(): WorldData =
-    copy(
-      tick = tick + 1,
-      lastUpdateTime = lastUpdateTime + millsPerTick,
-    )
 
 }
 
@@ -32,7 +27,8 @@ object WorldData {
 
   def initial(currentTime: Long): WorldData =
     WorldData(
-      tick = 0,
+      currentTick = 0,
+      targetTick = 0,
       lastUpdateTime = currentTime,
     )
 
