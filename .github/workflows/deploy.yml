@@ -1,0 +1,32 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Scala and SBT
+        uses: olafurpg/setup-scala@v14
+
+      - name: Build project
+        run: sbt fullOptJS
+
+      - name: Prepare files for GitHub Pages
+        run: |
+          mkdir ./publish-folder
+          sed -i 's|target/scala-2.13/antidle-fastopt/||g' index.html
+          cp ./index.html ./publish-folder/
+          find ./target/scala-2.13/ -type f \( -name "*.js" -o -name "*.js.map" \) -exec cp {} ./publish-folder/ \;
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./publish-folder
