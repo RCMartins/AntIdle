@@ -19,6 +19,7 @@ object Utils {
   val basicResourcesData: Var[BasicResources] = Var(BasicResources.initial)
   val resourcesSignal = basicResourcesData.signal
   val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
+  val nestSignal = nestAttributesData.signal
   val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
   val unlocksSignal = unlocksData.signal.distinct
 
@@ -143,6 +144,18 @@ object Utils {
         .usingIf(sugars > 0)(current =>
           Math.min(current + sugars, allData.nestAttributes.maxSugars)
         )
+    }
+
+  def ifUnlockedOpt[A](unlocks: Unlocks => Boolean)(value: => A): Signal[Option[A]] =
+    unlocksSignal.map(unlocks).distinct.map {
+      case false => None
+      case true  => Some(value)
+    }
+
+  def ifUnlockedOpt[A](signal: Signal[Boolean])(value: => A): Signal[Option[A]] =
+    signal.distinct.map {
+      case false => None
+      case true  => Some(value)
     }
 
 }

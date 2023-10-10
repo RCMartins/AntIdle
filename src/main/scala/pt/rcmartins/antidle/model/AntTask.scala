@@ -9,7 +9,9 @@ object AntTask {
   implicit val decoder: JsonDecoder[AntTask] = DeriveJsonDecoder.gen[AntTask]
   implicit val encoder: JsonEncoder[AntTask] = DeriveJsonEncoder.gen[AntTask]
 
-  case object Nursary extends AntTask
+  case object NestBuilder extends AntTask
+
+  case object Nursery extends AntTask
 
   case object SugarCollector extends AntTask
 

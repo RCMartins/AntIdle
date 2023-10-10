@@ -5,7 +5,8 @@ import pt.rcmartins.antidle.model.Chamber._
 import zio.json._
 
 case class NestAttributes(
-    chambers: Seq[Chamber],
+    nestLevel: Int,
+    chambers: AllChamberData,
     dirt: Long,
     deadAnts: Long,
     detritus: Long,
@@ -21,7 +22,8 @@ object NestAttributes {
 
   val initial: NestAttributes =
     NestAttributes(
-      chambers = Seq(QueenChamber(1)),
+      nestLevel = 0,
+      chambers = AllChamberData.initial,
       dirt = 0,
       deadAnts = 0,
       detritus = 0,

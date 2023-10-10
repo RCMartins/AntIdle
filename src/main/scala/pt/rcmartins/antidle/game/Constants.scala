@@ -14,4 +14,7 @@ object Constants {
   val DefaultTaskCollectSugarTick: Long = (0.1 * u).toLong
   val DefaultTaskCollectSugarSecond: Long = DefaultTaskCollectSugarTick * TicksPerSecond
 
+  val DefaultTaskBuildPowerTick: Long = (0.2 * u).toLong
+  val DefaultTaskBuildPowerSecond: Long = DefaultTaskBuildPowerTick * TicksPerSecond
+
 }

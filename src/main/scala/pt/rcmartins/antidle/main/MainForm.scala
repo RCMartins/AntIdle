@@ -5,7 +5,7 @@ import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.{HTMLDivElement, MouseEvent}
 import pt.rcmartins.antidle.game.Constants._
-import pt.rcmartins.antidle.model.{ActionCost, AntTask}
+import pt.rcmartins.antidle.model.{ActionCost, AntTask, Unlocks}
 import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
 import pt.rcmartins.antidle.utils.UIUtils.{prettyNumber, prettyNumberInt}
 import pt.rcmartins.antidle.utils.Utils._
@@ -56,8 +56,64 @@ object MainForm {
         resourcesDiv,
       ),
       div(
-        nestDiv,
-        child.maybe <-- antTasksUnlockedSignal.map { if (_) Some(tasksDiv) else None },
+        className := "card m-1",
+        div(
+          className := "card-header",
+          width.px := NestWidth,
+          maxWidth.px := NestWidth,
+          ul(
+            className := "nav nav-tabs card-tabs",
+            role := "tablist",
+            li(
+              className := "nav-item",
+              a(
+                className := "nav-link active",
+                idAttr := "nest-tab",
+                dataAttr("bs-toggle") := "tab",
+                href := "#nestContent",
+                role := "tab",
+                "Nest"
+              )
+            ),
+            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+              li(
+                className := "nav-item",
+                a(
+                  className := "nav-link",
+                  idAttr := "profile-tab",
+                  dataAttr("bs-toggle") := "tab",
+                  href := "#tasksContent",
+                  role := "tab",
+                  "Tasks",
+                  child <-- idleWorkersCountSignal.map {
+                    case 0 => span()
+                    case n => span(s" (", prettyNumberInt(n), ")")
+                  },
+                )
+              )
+            ),
+          )
+        ),
+        div(
+          className := "card-body",
+          div(
+            className := "tab-content",
+            div(
+              className := "tab-pane show active",
+              idAttr := "nestContent",
+              role := "tabpanel",
+              nestDiv,
+            ),
+            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+              div(
+                className := "tab-pane",
+                idAttr := "tasksContent",
+                role := "tabpanel",
+                tasksDiv,
+              )
+            ),
+          )
+        )
       ),
       div(
         saveLoadDiv,
@@ -86,7 +142,7 @@ object MainForm {
 
   def saveLoadDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
-      className := "card",
+      className := "card m-1",
       div(
         className := "row m-0",
         button(
@@ -206,55 +262,42 @@ object MainForm {
 
   def nestDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
-      className := "m-1",
-      className := "card",
-      width.px := NestWidth,
-      maxWidth.px := NestWidth,
+      className := "row",
       div(
-        className := "card-header",
-        "Nest",
+        className := "col-6 p-2 d-grid",
+        button(
+          className := "btn btn-primary",
+          className := "fs-4",
+          `type` := "button",
+          "Gather Sugar",
+          onClick --> { _ => giveResources(sugars = PlayerGatherSugarClickAmount) }
+        ),
       ),
-      div(
-        className := "card-body",
-        div(
-          className := "row",
-          div(
-            className := "col-6 p-2 d-grid",
-            button(
-              className := "btn btn-primary",
-              className := "fs-4",
-              `type` := "button",
-              "Gather Sugar",
-              onClick --> { _ => giveResources(sugars = PlayerGatherSugarClickAmount) }
-            ),
-          ),
-          child.maybe <-- unlocksSignal.map(_.canLayEggs).map {
-            case false =>
-              None
-            case true =>
-              Some(
-                actionButton(
-                  id = "action-lay-egg",
-                  name = "Lay Egg",
-                  Actions.layEggActionEnabled,
-                  Actions.layEggActionCost,
-                  () => Actions.layEggAction(),
-                )
-              )
-          },
+      child.maybe <-- ifUnlockedOpt(_.canLayEggs) {
+        actionButton(
+          name = "Lay Egg",
+          Actions.layEggActionEnabled,
+          Actions.layEggActionCost,
+          () => Actions.layEggAction(),
         )
-      )
+      },
+      child.maybe <-- ifUnlockedOpt(_.canBuildNest) {
+        actionButton(
+          name = "Expand Nest",
+          Actions.layEggActionEnabled,
+          Actions.layEggActionCost,
+          () => Actions.layEggAction(),
+        )
+      },
     )
 
   private def actionButton(
-      id: String,
       name: String,
       enabledSignal: Signal[Boolean],
       costSignal: Signal[ActionCost],
       onClickAction: () => Unit,
   ): ReactiveHtmlElement[HTMLDivElement] =
     div(
-      idAttr := id,
       className := "col-6 p-2 d-grid",
       button(
         className := "btn btn-primary",
@@ -275,25 +318,12 @@ object MainForm {
 
   def tasksDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
-      className := "m-1",
-      className := "card",
-      width.px := NestWidth,
-      maxWidth.px := NestWidth,
-      div(
-        className := "card-header",
-        "Tasks",
+      className := "d-grid gap-2",
+      span(
+        "Idle Ants: ",
+        b(child <-- idleWorkersCountSignal.map(prettyNumber)),
       ),
-      div(
-        className := "card-body",
-        div(
-          className := "d-grid gap-2",
-          span(
-            "Idle Ants: ",
-            b(child <-- idleWorkersCountSignal.map(prettyNumber)),
-          ),
-          children <-- unlockedAntTasks.map(_.map(taskDiv)),
-        )
-      )
+      children <-- unlockedAntTasks.map(_.map(taskDiv)),
     )
 
   def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
@@ -302,12 +332,14 @@ object MainForm {
     val id = s"task-${antTask.toString.toLowerCase}"
 
     val tooltipSignal = antTask match {
-      case AntTask.Nursary =>
-        Val(div("???"))
       case AntTask.SugarCollector =>
         Val(div(s"+", prettyNumber(DefaultTaskCollectSugarSecond), " sugar per second / ant"))
       case AntTask.WaterCollector =>
         Val(div("???"))
+      case AntTask.Nursery =>
+        Val(div("???"))
+      case AntTask.NestBuilder =>
+        Val(div(s"+", prettyNumber(DefaultTaskBuildPowerSecond), " build power per second / ant"))
     }
 
     div(
@@ -316,9 +348,10 @@ object MainForm {
       span(
         className := "col-5",
         antTask match {
-          case AntTask.Nursary        => "Nursary"
           case AntTask.SugarCollector => "Sugar Collector"
           case AntTask.WaterCollector => "Water Collector"
+          case AntTask.NestBuilder    => "Nest Builder"
+          case AntTask.Nursery        => "Nursery"
         },
         nbsp,
         "(",

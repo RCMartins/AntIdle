@@ -11,11 +11,11 @@ case class AntsData(
   val idleWorkersCount: Long =
     workers - tasks.map(_._2).sum
 
-  def unlockTask(anttask: AntTask): AntsData =
-    if (tasks.exists(_._1 == anttask))
+  def unlockTask(antTask: AntTask): AntsData =
+    if (tasks.exists(_._1 == antTask))
       this
     else
-      copy(tasks = tasks :+ (anttask, 0))
+      copy(tasks = tasks :+ (antTask, 0))
 
 }
 

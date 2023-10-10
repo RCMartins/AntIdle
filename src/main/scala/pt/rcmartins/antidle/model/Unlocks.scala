@@ -7,7 +7,7 @@ case class Unlocks(
     layedFirstEgg: Boolean = false,
     bornFirstWorker: Boolean = false,
     antTasksUnlocked: Boolean = false,
-    canUpgradeNest: Boolean = false,
+    canBuildNest: Boolean = false,
     larvaeUnlocked: Boolean = false,
     pupaeUnlocked: Boolean = false,
 )
