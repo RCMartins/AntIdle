@@ -19,6 +19,14 @@ object UIUtils {
       span(">9999")
     }
 
+  def prettyNumber1d(num: Long): ReactiveHtmlElement[HTMLSpanElement] =
+    if (num <= 9999 * u) {
+      val shortValue = num / 100
+      span((shortValue / 10).toString, ".", f"${shortValue % 10}%01d")
+    } else {
+      span(">9999")
+    }
+
   def prettyNumberInt(num: Long): ReactiveHtmlElement[HTMLSpanElement] =
     span((num / u).toString)
 

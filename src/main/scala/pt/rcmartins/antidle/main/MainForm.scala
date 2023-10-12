@@ -1,14 +1,16 @@
 package pt.rcmartins.antidle.main
 
+import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import org.scalajs.dom.{HTMLDivElement, MouseEvent}
+import org.scalajs.dom.{HTMLDivElement, HTMLSpanElement, MouseEvent}
+import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants._
-import pt.rcmartins.antidle.model.{ActionCost, AntTask, Unlocks}
-import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
-import pt.rcmartins.antidle.utils.UIUtils.{prettyNumber, prettyNumberInt}
+import pt.rcmartins.antidle.model.{ActionCost, AntTask, BuildTask}
+import pt.rcmartins.antidle.utils.UIUtils._
 import pt.rcmartins.antidle.utils.Utils._
+import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -47,6 +49,7 @@ object MainForm {
   private val MessagesWidth = 500
 
   def apply(): ReactiveHtmlElement[HTMLDivElement] = {
+    val owner = new OneTimeOwner(() => println("MainForm owner is being called after dispose"))
     initialize()
     div(
       className := "m-2",
@@ -102,7 +105,7 @@ object MainForm {
               className := "tab-pane show active",
               idAttr := "nestContent",
               role := "tabpanel",
-              nestDiv,
+              nestDiv(owner),
             ),
             child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
               div(
@@ -117,6 +120,7 @@ object MainForm {
       ),
       div(
         saveLoadDiv,
+        child.maybe <-- ifUnlockedOpt(buildQueueUnlockedSignal)(buildQueueDiv),
         messagesDiv,
       ),
       onMouseMove --> (ev => {
@@ -140,7 +144,7 @@ object MainForm {
     )
   }
 
-  def saveLoadDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def saveLoadDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "card m-1",
       div(
@@ -168,7 +172,37 @@ object MainForm {
       )
     )
 
-  def messagesDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def buildQueueDiv: ReactiveHtmlElement[HTMLDivElement] = {
+    def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] =
+      buildTask match {
+        case BuildTask.NestUpgrade(buildPowerRequired) =>
+          span(Constants.NestUpgradeName, " (", prettyNumber1d(buildPowerRequired), ")")
+      }
+
+    div(
+      className := "m-1",
+      className := "card",
+      className := "fs-4",
+      width.px := MessagesWidth,
+      maxWidth.px := MessagesWidth,
+      div(
+        className := "card-header",
+        "Build Queue",
+      ),
+      div(
+        className := "card-body",
+        div(
+          className := "d-grid gap-2",
+          child <-- buildQueueSignal.map {
+            case Seq() => span("<empty>")
+            case seq   => span(seq.map(buildTask => buildTaskName(buildTask)))
+          }
+        )
+      )
+    )
+  }
+
+  private def messagesDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "m-1",
       className := "card",
@@ -188,7 +222,7 @@ object MainForm {
       )
     )
 
-  def resourcesDiv: Modifier[ReactiveHtmlElement[HTMLDivElement]] =
+  private def resourcesDiv: Modifier[ReactiveHtmlElement[HTMLDivElement]] =
     div(
       className := "m-1",
       className := "card",
@@ -203,7 +237,12 @@ object MainForm {
         child.maybe <-- createResourceDiv("Sugars", sugarsSignal, maxSugars, Val(true)),
 //        child.maybe <-- createResourceDiv("Proteins", proteinsSignal, Val(0),Val(false)),
 //        child.maybe <-- createResourceDiv("Water", waterSignal, Val(0),Val(false)),
-        child.maybe <-- createResourceDiv("Colony Points", colonyPointsSignal, Val(0), Val(false)),
+        child.maybe <-- createResourceDiv(
+          "Colony Points",
+          colonyPointsSignal,
+          Val(0),
+          unlocksSignal.map(_.showColonyPointsResource).distinct,
+        ),
 //        child.maybe <-- createResourceDiv("DNA", DNASignal, Val(0),Val(false)),
         nbsp,
         child.maybe <-- createResourceDiv(
@@ -221,7 +260,7 @@ object MainForm {
       )
     )
 
-  def createResourceDiv(
+  private def createResourceDiv(
       name: String,
       valueSignal: Signal[Long],
       maxValueSignal: Signal[Long],
@@ -260,7 +299,7 @@ object MainForm {
         )
     }
 
-  def nestDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def nestDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "row",
       div(
@@ -283,10 +322,15 @@ object MainForm {
       },
       child.maybe <-- ifUnlockedOpt(_.canBuildNest) {
         actionButton(
-          name = "Expand Nest",
-          Actions.layEggActionEnabled,
-          Actions.layEggActionCost,
-          () => Actions.layEggAction(),
+          name = Constants.NestUpgradeName,
+          Actions.nestUpgradeEnabled,
+          Actions.nestUpgradeCost,
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              Actions.nestUpgradeCost,
+              actionCost => Actions.addBuildTask(BuildTask.NestUpgrade(actionCost.buildPower))
+            ),
         )
       },
     )
@@ -311,12 +355,17 @@ object MainForm {
       setTooltip(
         elem,
         costSignal.map { cost =>
-          div(s"Cost: ", prettyNumber(cost.sugars), " sugars")
+          div(
+            ifGreater0(cost.sugars)(div(s"Cost: ", prettyNumber(cost.sugars), " sugars")),
+            ifGreater0(cost.buildPower)(
+              div(s"Cost: ", prettyNumber(cost.buildPower), " build power")
+            ),
+          )
         }
       )
     )
 
-  def tasksDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def tasksDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "d-grid gap-2",
       span(
@@ -326,7 +375,7 @@ object MainForm {
       children <-- unlockedAntTasks.map(_.map(taskDiv)),
     )
 
-  def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
+  private def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
     val amountSignal =
       antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
     val id = s"task-${antTask.toString.toLowerCase}"

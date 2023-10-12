@@ -17,4 +17,9 @@ object Constants {
   val DefaultTaskBuildPowerTick: Long = (0.2 * u).toLong
   val DefaultTaskBuildPowerSecond: Long = DefaultTaskBuildPowerTick * TicksPerSecond
 
+  val DefaultNestLevelColonyPointsTick: Long = (0.1 * u).toLong
+  val DefaultNestLevelColonyPointsSecond: Long = DefaultNestLevelColonyPointsTick * TicksPerSecond
+
+  val NestUpgradeName = "Nest Upgrade"
+
 }

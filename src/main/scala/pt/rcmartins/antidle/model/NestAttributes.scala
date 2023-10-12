@@ -7,12 +7,14 @@ import zio.json._
 case class NestAttributes(
     nestLevel: Int,
     chambers: AllChamberData,
+    buildQueue: Seq[BuildTask],
     dirt: Long,
     deadAnts: Long,
     detritus: Long,
     maxSugars: Long,
     maxEggs: Long,
     maxWorkers: Long,
+    maxBuildQueue: Int,
 )
 
 object NestAttributes {
@@ -24,12 +26,14 @@ object NestAttributes {
     NestAttributes(
       nestLevel = 0,
       chambers = AllChamberData.initial,
+      buildQueue = Seq.empty,
       dirt = 0,
       deadAnts = 0,
       detritus = 0,
       maxSugars = 1000 * u,
       maxEggs = 2 * u,
       maxWorkers = 5 * u,
+      maxBuildQueue = 1,
     )
 
 }

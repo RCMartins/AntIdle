@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.utils
 import com.raquo.airstream.ownership.Subscription
 import com.raquo.laminar.api.L.{u => _, _}
 import pt.rcmartins.antidle.game.Constants.u
-import pt.rcmartins.antidle.model.{AntTask, AntsData, NestAttributes, Unlocks}
+import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, NestAttributes, Unlocks}
 import pt.rcmartins.antidle.utils.Utils._
 
 object UnlockUtils {
@@ -52,12 +52,23 @@ object UnlockUtils {
       }
     )(owner)
 
-    unlockSubscription[NestAttributes](
-      nestSignal,
-      _.nestLevel >= 1,
+    unlockSubscription[Seq[BuildTask]](
+      buildQueueSignal,
+      _.nonEmpty,
       _ => {
         Var.update(
+          unlocksData -> ((_: Unlocks).copy(buildQueueUnlocked = true)),
           antsData -> ((_: AntsData).unlockTask(AntTask.NestBuilder)),
+        )
+      }
+    )(owner)
+
+    unlockSubscription[Long](
+      colonyPointsSignal,
+      _ > 0,
+      _ => {
+        Var.update(
+          unlocksData -> ((_: Unlocks).copy(showColonyPointsResource = true)),
         )
       }
     )(owner)

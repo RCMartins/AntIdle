@@ -56,6 +56,9 @@ object Utils {
   val maxEggs: Signal[Long] = nestAttributesData.signal.map(_.maxEggs).distinct
   val maxWorkers: Signal[Long] = nestAttributesData.signal.map(_.maxWorkers).distinct
 
+  val buildQueueSignal: Signal[Seq[BuildTask]] = nestSignal.map(_.buildQueue).distinct
+  val maxBuildQueueSignal: Signal[Int] = nestSignal.map(_.maxBuildQueue).distinct
+
   private val MaxMessages = 10
   val messages: Var[Seq[String]] = Var(Seq.empty)
 
@@ -65,6 +68,7 @@ object Utils {
   val lastMessage: Signal[Option[String]] = messages.signal.map(_.headOption)
 
   val antTasksUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.antTasksUnlocked).distinct
+  val buildQueueUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.buildQueueUnlocked).distinct
 
   def initialize(): Unit = {
     val owner = new OneTimeOwner(() => ())
@@ -157,5 +161,22 @@ object Utils {
       case false => None
       case true  => Some(value)
     }
+
+  def ifGreater0[A](compareValue: Long)(value: => A): Option[A] =
+    if (compareValue == 0) None else Some(value)
+
+  def useSignalValue[A](owner: Owner, signal: Signal[A], action: A => Unit): Unit = {
+    val eventBus: EventBus[Unit] = new EventBus
+
+    var subscription: Subscription = null
+    subscription = eventBus.events
+      .sample(signal)
+      .foreach { signalValue =>
+        action(signalValue)
+        subscription.kill()
+      }(owner)
+
+    eventBus.writer.onNext(())
+  }
 
 }

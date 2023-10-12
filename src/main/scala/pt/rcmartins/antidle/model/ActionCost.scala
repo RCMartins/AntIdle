@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.model
 
 case class ActionCost(
-    sugars: Long,
+    sugars: Long = 0L,
+    buildPower: Long = 0L,
 )

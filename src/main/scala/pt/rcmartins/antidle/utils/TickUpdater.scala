@@ -3,7 +3,9 @@ package pt.rcmartins.antidle.utils
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.u
-import pt.rcmartins.antidle.model.{AntBrood, AntTask}
+import pt.rcmartins.antidle.model.{AntBrood, AntTask, BuildTask}
+
+import scala.util.chaining.scalaUtilChainingOps
 
 object TickUpdater {
 
@@ -38,8 +40,44 @@ object TickUpdater {
             allData.ants.tasks.find(_._1 == task).map(_._2 / u).getOrElse(0L)
 
           val sugarWorkers: Long = countWorkers(AntTask.SugarCollector)
+          val buildWorkers: Long = countWorkers(AntTask.NestBuilder)
+
+          val (updatedBuildQueue: Seq[BuildTask], finishedBuild: Option[BuildTask]) =
+            allData.nestAttributes.buildQueue match {
+              case buildTask +: otherTasks if buildWorkers > 0 =>
+                val updatedBuildTask =
+                  buildTask.useBuildPower(buildWorkers * Constants.DefaultTaskBuildPowerTick)
+
+                if (updatedBuildTask.isFinished)
+                  (otherTasks, Some(updatedBuildTask))
+                else
+                  (updatedBuildTask +: otherTasks, None)
+              case other =>
+                (other, None)
+            }
+
+          allData
+            .giveResources(
+              sugars = sugarWorkers * Constants.DefaultTaskCollectSugarTick,
+            )
+            .modify(_.nestAttributes.buildQueue)
+            .setToIf(buildWorkers > 0)(updatedBuildQueue)
+            .pipe { allData =>
+              finishedBuild match {
+                case None => allData
+                case Some(BuildTask.NestUpgrade(_)) =>
+                  allData
+                    .modify(_.nestAttributes.nestLevel)
+                    .using(_ + 1)
+                    .modify(_.nestAttributes.maxWorkers)
+                    .using(_ + 2 * u)
+              }
+            }
+        },
+        allData => {
           allData.giveResources(
-            sugars = sugarWorkers * Constants.DefaultTaskCollectSugarTick,
+            colonyPoints =
+              allData.nestAttributes.nestLevel * Constants.DefaultNestLevelColonyPointsTick,
           )
         }
       )

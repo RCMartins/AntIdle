@@ -15,10 +15,12 @@ case class AllData(
     unlocks: Unlocks,
 ) {
 
-  def giveResources(sugars: Long): AllData =
+  def giveResources(sugars: Long = 0, colonyPoints: Long = 0): AllData =
     this
       .modify(_.basicResources.sugars)
       .usingIf(sugars > 0)(current => Math.min(current + sugars, nestAttributes.maxSugars))
+      .modify(_.basicResources.colonyPoints)
+      .usingIf(colonyPoints > 0)(_ + colonyPoints)
 
   def updateVars(): Unit =
     Var.set(
