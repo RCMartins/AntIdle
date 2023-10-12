@@ -7,7 +7,7 @@ import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.{HTMLDivElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants._
-import pt.rcmartins.antidle.model.{ActionCost, AntTask, BuildTask}
+import pt.rcmartins.antidle.model.{ActionBonus, ActionCost, AntTask, BuildTask}
 import pt.rcmartins.antidle.utils.UIUtils._
 import pt.rcmartins.antidle.utils.Utils._
 import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
@@ -176,7 +176,7 @@ object MainForm {
     def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] =
       buildTask match {
         case BuildTask.NestUpgrade(buildPowerRequired) =>
-          span(Constants.NestUpgradeName, " (", prettyNumber1d(buildPowerRequired), ")")
+          span(Constants.NestUpgradeName, " [", prettyNumber1d(buildPowerRequired), "]")
       }
 
     div(
@@ -187,14 +187,22 @@ object MainForm {
       maxWidth.px := MessagesWidth,
       div(
         className := "card-header",
-        "Build Queue",
+        div(
+          span(
+            "Build Queue (",
+            child.text <-- buildQueueSignal.map(_.size),
+            "/",
+            child.text <-- maxBuildQueueSignal,
+            ")"
+          ),
+        )
       ),
       div(
         className := "card-body",
         div(
           className := "d-grid gap-2",
           child <-- buildQueueSignal.map {
-            case Seq() => span("<empty>")
+            case Seq() => span(nbsp)
             case seq   => span(seq.map(buildTask => buildTaskName(buildTask)))
           }
         )
@@ -315,16 +323,22 @@ object MainForm {
       child.maybe <-- ifUnlockedOpt(_.canLayEggs) {
         actionButton(
           name = "Lay Egg",
+          Val(None),
           Actions.layEggActionEnabled,
+          Val(None),
           Actions.layEggActionCost,
+          Val(ActionBonus(eggs = 1 * u)),
           () => Actions.layEggAction(),
         )
       },
       child.maybe <-- ifUnlockedOpt(_.canBuildNest) {
         actionButton(
           name = Constants.NestUpgradeName,
+          nestSignal.map(_.nestLevel).distinct.map(Some(_)),
           Actions.nestUpgradeEnabled,
+          Val(None),
           Actions.nestUpgradeCost,
+          Val(ActionBonus(maxWorkers = 2 * u)),
           () =>
             useSignalValue[ActionCost](
               owner,
@@ -337,31 +351,65 @@ object MainForm {
 
   private def actionButton(
       name: String,
+      levelSignal: Signal[Option[Int]],
       enabledSignal: Signal[Boolean],
+      descriptionSignal: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
       costSignal: Signal[ActionCost],
+      bonusSignal: Signal[ActionBonus],
       onClickAction: () => Unit,
   ): ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "col-6 p-2 d-grid",
       button(
-        className := "btn btn-primary",
+        className := "btn btn-primary position-relative",
         className := "fs-4",
         `type` := "button",
         name,
         disabled <-- enabledSignal.map(!_),
         onClick --> { _ => onClickAction() },
+        child.maybe <--
+          levelSignal.map {
+            _.filter(_ > 0).map { level =>
+              span(
+                className := "position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary",
+                level,
+              )
+            }
+          },
       ),
     ).amendThis(elem =>
       setTooltip(
         elem,
-        costSignal.map { cost =>
+        Val(
           div(
-            ifGreater0(cost.sugars)(div(s"Cost: ", prettyNumber(cost.sugars), " sugars")),
-            ifGreater0(cost.buildPower)(
-              div(s"Cost: ", prettyNumber(cost.buildPower), " build power")
-            ),
+            className := "p-1",
+            child <-- descriptionSignal.map { divOpt =>
+              div(
+                divOpt,
+                hr(),
+              )
+            },
+            child <-- costSignal.map { cost =>
+              div(
+                className := "d-flex justify-content-center",
+                ifGreater0(cost.sugars)(prettyNumberSimple("", cost.sugars, " sugars")),
+                ifGreater0(cost.buildPower)(
+                  prettyNumberSimple("", cost.buildPower, " build power")
+                ),
+              )
+            },
+            child <-- bonusSignal.map { bonus =>
+              div(
+                hr(),
+                className := "d-flex justify-content-center",
+                ifGreater0(bonus.eggs)(prettyNumberSimple("+", bonus.eggs, " eggs")),
+                ifGreater0(bonus.maxWorkers)(
+                  prettyNumberSimple("+", bonus.maxWorkers, " max workers")
+                ),
+              )
+            },
           )
-        }
+        ),
       )
     )
 
@@ -380,15 +428,17 @@ object MainForm {
       antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
     val id = s"task-${antTask.toString.toLowerCase}"
 
-    val tooltipSignal = antTask match {
+    val tooltipSignal: Val[ReactiveHtmlElement[HTMLDivElement]] = antTask match {
       case AntTask.SugarCollector =>
-        Val(div(s"+", prettyNumber(DefaultTaskCollectSugarSecond), " sugar per second / ant"))
+        Val(div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant")))
       case AntTask.WaterCollector =>
         Val(div("???"))
       case AntTask.Nursery =>
         Val(div("???"))
       case AntTask.NestBuilder =>
-        Val(div(s"+", prettyNumber(DefaultTaskBuildPowerSecond), " build power per second / ant"))
+        Val(
+          div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
+        )
     }
 
     div(

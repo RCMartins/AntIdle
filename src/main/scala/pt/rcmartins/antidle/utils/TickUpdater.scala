@@ -46,7 +46,7 @@ object TickUpdater {
             allData.nestAttributes.buildQueue match {
               case buildTask +: otherTasks if buildWorkers > 0 =>
                 val updatedBuildTask =
-                  buildTask.useBuildPower(buildWorkers * Constants.DefaultTaskBuildPowerTick)
+                  buildTask.useBuildPower(buildWorkers * Constants.defaultTaskBuildPowerTick)
 
                 if (updatedBuildTask.isFinished)
                   (otherTasks, Some(updatedBuildTask))
@@ -58,7 +58,7 @@ object TickUpdater {
 
           allData
             .giveResources(
-              sugars = sugarWorkers * Constants.DefaultTaskCollectSugarTick,
+              sugars = sugarWorkers * Constants.defaultTaskCollectSugarTick,
             )
             .modify(_.nestAttributes.buildQueue)
             .setToIf(buildWorkers > 0)(updatedBuildQueue)
@@ -77,7 +77,7 @@ object TickUpdater {
         allData => {
           allData.giveResources(
             colonyPoints =
-              allData.nestAttributes.nestLevel * Constants.DefaultNestLevelColonyPointsTick,
+              allData.nestAttributes.nestLevel * Constants.defaultNestLevelColonyPointsTick,
           )
         }
       )

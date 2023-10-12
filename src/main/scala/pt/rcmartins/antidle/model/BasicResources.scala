@@ -6,7 +6,7 @@ case class BasicResources(
     sugars: Long,
     proteins: Long,
     water: Long,
-    colonyPoints: Long, // Needs a better name? Biomass? Nectar? Queen's Favor?
+    colonyPoints: Long,
     DNA: Long,
 )
 

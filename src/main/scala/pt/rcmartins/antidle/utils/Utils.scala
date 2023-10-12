@@ -15,13 +15,13 @@ object Utils {
   val worldData: Var[WorldData] = Var(WorldData.initial(System.currentTimeMillis()))
   val queensData: Var[QueenData] = Var(QueenData.initial)
   val antsData: Var[AntsData] = Var(AntsData.initial)
-  val antsSignal = antsData.signal
+  val antsSignal: Signal[AntsData] = antsData.signal
   val basicResourcesData: Var[BasicResources] = Var(BasicResources.initial)
-  val resourcesSignal = basicResourcesData.signal
+  val resourcesSignal: Signal[BasicResources] = basicResourcesData.signal
   val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
-  val nestSignal = nestAttributesData.signal
+  val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
   val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
-  val unlocksSignal = unlocksData.signal.distinct
+  val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
 

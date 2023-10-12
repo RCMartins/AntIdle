@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.utils
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants
-import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.model.{ActionCost, AntBrood, AntTask, BuildTask}
 import pt.rcmartins.antidle.utils.Utils._
 
@@ -51,7 +51,10 @@ object Actions {
     }
 
   val nestUpgradeCost: Signal[ActionCost] =
-    Val(ActionCost(buildPower = 20 * u))
+    nestSignal
+      .map(_.nestLevel)
+      .distinct
+      .map(level => ActionCost(buildPower = (20 * u * exponent1_25(level)).floor.toLong))
 
   val nestUpgradeEnabled: Signal[Boolean] =
     buildQueueSignal
