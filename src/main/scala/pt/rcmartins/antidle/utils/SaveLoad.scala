@@ -20,7 +20,9 @@ object SaveLoad {
     java.util.Base64.getEncoder.encodeToString(str.getBytes)
 
   def loadFromLocalStorage(): Option[AllData] =
-    Option(localStorage.getItem(SaveGameName)).flatMap(loadString)
+    Option(localStorage.getItem(SaveGameName))
+      .flatMap(loadString)
+      .filter(_.version == AllData.CurrentVersion)
 
   def loadString(str: String): Option[AllData] =
     loadFromJson(base64ToJson(str))

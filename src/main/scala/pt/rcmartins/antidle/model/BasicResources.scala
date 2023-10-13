@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.model
 import zio.json._
 
 case class BasicResources(
-    sugars: Long,
+    sugar: Long,
     proteins: Long,
     water: Long,
     colonyPoints: Long,
@@ -17,7 +17,7 @@ object BasicResources {
 
   val initial: BasicResources =
     BasicResources(
-      sugars = 0,
+      sugar = 0,
       proteins = 0,
       water = 0,
       colonyPoints = 0,

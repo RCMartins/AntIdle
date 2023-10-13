@@ -30,20 +30,20 @@ object Actions {
     }
 
   val layEggActionCost: Signal[ActionCost] =
-    Val(ActionCost(sugars = Constants.EggSugarCost))
+    Val(ActionCost(sugar = Constants.LayEggSugarCost))
 
   val layEggActionEnabled: Signal[Boolean] =
-    sugarsSignal
+    sugarSignal
       .combineWith(eggsCountSignal, maxEggs, antAndBroodCount, maxWorkers)
-      .map { case (sugars, eggsCount, maxEggs, antCount, maxAnt) =>
-        sugars >= Constants.EggSugarCost && eggsCount < maxEggs && antCount < maxAnt
+      .map { case (sugar, eggsCount, maxEggs, antCount, maxAnt) =>
+        sugar >= Constants.LayEggSugarCost && eggsCount < maxEggs && antCount < maxAnt
       }
 
   def layEggAction(): Unit =
     actionUpdater.writer.onNext { allData =>
       allData
-        .modify(_.basicResources.sugars)
-        .using(_ - Constants.EggSugarCost)
+        .modify(_.basicResources.sugar)
+        .using(_ - Constants.LayEggSugarCost)
         .modify(_.ants.eggsAndLarvae)
         .using(_ :+ AntBrood.Egg(allData.world.currentTick))
         .modify(_.unlocks.layedFirstEgg)

@@ -6,6 +6,7 @@ import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
+import pt.rcmartins.antidle.utils.Utils.messagesSeq
 
 import scala.annotation.tailrec
 import scala.scalajs.js.timers.setInterval
@@ -46,42 +47,43 @@ object Utils {
   val unlockedAntTasks: Signal[Seq[AntTask]] = antsSignal.map(_.tasks.map(_._1)).distinct
   val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount).distinct
 
-  val sugarsSignal: Signal[Long] = resourcesSignal.map(_.sugars).distinct
+  val sugarSignal: Signal[Long] = resourcesSignal.map(_.sugar).distinct
   val proteinsSignal: Signal[Long] = resourcesSignal.map(_.proteins).distinct
   val waterSignal: Signal[Long] = resourcesSignal.map(_.water).distinct
   val colonyPointsSignal: Signal[Long] = resourcesSignal.map(_.colonyPoints).distinct
   val DNASignal: Signal[Long] = resourcesSignal.map(_.DNA).distinct
 
-  val maxSugars: Signal[Long] = nestAttributesData.signal.map(_.maxSugars).distinct
+  val maxSugar: Signal[Long] = nestAttributesData.signal.map(_.maxSugar).distinct
   val maxEggs: Signal[Long] = nestAttributesData.signal.map(_.maxEggs).distinct
   val maxWorkers: Signal[Long] = nestAttributesData.signal.map(_.maxWorkers).distinct
 
   val buildQueueSignal: Signal[Seq[BuildTask]] = nestSignal.map(_.buildQueue).distinct
   val maxBuildQueueSignal: Signal[Int] = nestSignal.map(_.maxBuildQueue).distinct
 
-  private val MaxMessages = 10
-  val messages: Var[Seq[String]] = Var(Seq.empty)
+  val messagesSeq: Var[Seq[String]] = Var(Seq.empty)
 
-  def addMessage(message: String): Unit =
-    messages.update(oldMessages => (message +: oldMessages).take(MaxMessages))
+  val messagesSignal: StrictSignal[Seq[String]] = messagesSeq.signal
 
-  val lastMessage: Signal[Option[String]] = messages.signal.map(_.headOption)
+//  val lastMessage: Signal[Option[String]] = messagesSeq.signal.map(_.headOption)
 
   val antTasksUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.antTasksUnlocked).distinct
   val buildQueueUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.buildQueueUnlocked).distinct
+
+  val updateBus: EventBus[Unit] = new EventBus()
+  val ticksBus: EventBus[Unit] = new EventBus()
+  val actionUpdater: EventBus[AllData => AllData] = new EventBus()
 
   def initialize(): Unit = {
     val owner = new OneTimeOwner(() => ())
     initializeTicksUpdater(owner)
     initializeActionUpdater(owner)
     setInterval(200)(updateState())
-    addMessage("The queen needs help collecting food!")
     UnlockUtils.checkUnlocks(owner)
+    addMessage("We should collect some sugar to feed our queen.")
   }
 
-  val updateBus: EventBus[Unit] = new EventBus()
-  val ticksBus: EventBus[Unit] = new EventBus()
-  val actionUpdater: EventBus[AllData => AllData] = new EventBus()
+  def addMessage(message: String): Unit =
+    actionUpdater.writer.onNext(_.addMessage(message))
 
   private def updateState(): Unit =
     updateBus.writer.onNext(())
@@ -108,11 +110,12 @@ object Utils {
         resourcesSignal,
         nestAttributesData,
         unlocksData,
+        messagesSeq,
       )
-      .foreach { case (world, queen, ants, basic, next, unlocks) =>
+      .foreach { case (world, queen, ants, basic, next, unlocks, messages) =>
         val ticksToUpdate = world.targetTick - world.currentTick
         if (ticksToUpdate > 0) {
-          val allData = AllData(world, queen, ants, basic, next, unlocks)
+          val allData = AllData.simple(world, queen, ants, basic, next, unlocks, messages)
 
           @tailrec
           def loop(ticksLeft: Long, allData: AllData): AllData =
@@ -135,19 +138,16 @@ object Utils {
         resourcesSignal,
         nestAttributesData,
         unlocksData,
+        messagesSeq,
       )
-      .foreach { case (actionFunc, world, queen, ants, basic, next, unlocks) =>
-        val allData = AllData(world, queen, ants, basic, next, unlocks)
+      .foreach { case (actionFunc, world, queen, ants, basic, next, unlocks, messages) =>
+        val allData = AllData.simple(world, queen, ants, basic, next, unlocks, messages)
         actionFunc(allData).updateVars()
       }(owner)
 
-  def giveResources(sugars: Long): Unit =
+  def giveResources(sugar: Long): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.basicResources.sugars)
-        .usingIf(sugars > 0)(current =>
-          Math.min(current + sugars, allData.nestAttributes.maxSugars)
-        )
+      allData.giveResources(sugar = sugar)
     }
 
   def ifUnlockedOpt[A](unlocks: Unlocks => Boolean)(value: => A): Signal[Option[A]] =
@@ -162,8 +162,8 @@ object Utils {
       case true  => Some(value)
     }
 
-  def ifGreater0[A](compareValue: Long)(value: => A): Option[A] =
-    if (compareValue == 0) None else Some(value)
+  def ifGreater0[A](compareValue: Long)(func: Long => A): Option[A] =
+    if (compareValue == 0) None else Some(func(compareValue))
 
   def useSignalValue[A](owner: Owner, signal: Signal[A], action: A => Unit): Unit = {
     val eventBus: EventBus[Unit] = new EventBus

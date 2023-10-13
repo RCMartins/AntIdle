@@ -58,7 +58,7 @@ object TickUpdater {
 
           allData
             .giveResources(
-              sugars = sugarWorkers * Constants.defaultTaskCollectSugarTick,
+              sugar = sugarWorkers * Constants.defaultTaskCollectSugarTick,
             )
             .modify(_.nestAttributes.buildQueue)
             .setToIf(buildWorkers > 0)(updatedBuildQueue)

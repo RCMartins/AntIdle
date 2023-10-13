@@ -8,7 +8,7 @@ object Constants {
 
   val MaxTicksCatchUp: Int = 10
 
-  val EggSugarCost: Long = 10 * u
+  val LayEggSugarCost: Long = 10 * u
 
   val PlayerGatherSugarClickAmount: Long = 1 * u
   val (defaultTaskCollectSugarTick: Long, defaultTaskCollectSugarSecond: Long) =

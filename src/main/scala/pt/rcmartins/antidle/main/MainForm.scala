@@ -223,9 +223,14 @@ object MainForm {
       ),
       div(
         className := "card-body",
+        className := "fs-5",
         div(
           className := "d-grid gap-2",
-          child.maybe <-- lastMessage.map(_.map(text => span(text)))
+          child.maybe <-- messagesSignal.signal.map(_.headOption.map(text => span(text))),
+          children <--
+            messagesSignal.map {
+              _.drop(1).map(text => div(opacity := 0.5, text))
+            }
         )
       )
     )
@@ -242,16 +247,13 @@ object MainForm {
       ),
       div(
         className := "card-body",
-        child.maybe <-- createResourceDiv("Sugars", sugarsSignal, maxSugars, Val(true)),
-//        child.maybe <-- createResourceDiv("Proteins", proteinsSignal, Val(0),Val(false)),
-//        child.maybe <-- createResourceDiv("Water", waterSignal, Val(0),Val(false)),
+        child.maybe <-- createResourceDiv("Sugar", sugarSignal, maxSugar, Val(true)),
         child.maybe <-- createResourceDiv(
           "Colony Points",
           colonyPointsSignal,
           Val(0),
           unlocksSignal.map(_.showColonyPointsResource).distinct,
         ),
-//        child.maybe <-- createResourceDiv("DNA", DNASignal, Val(0),Val(false)),
         nbsp,
         child.maybe <-- createResourceDiv(
           "Eggs",
@@ -310,35 +312,39 @@ object MainForm {
   private def nestDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "row",
-      div(
-        className := "col-6 p-2 d-grid",
-        button(
-          className := "btn btn-primary",
-          className := "fs-4",
-          `type` := "button",
-          "Gather Sugar",
-          onClick --> { _ => giveResources(sugars = PlayerGatherSugarClickAmount) }
-        ),
+      actionButton(
+        name = "Gather Sugar",
+        Val(None),
+        Val(true),
+        Val(None),
+        Val(ActionCost.empty),
+        Val(ActionBonus(sugar = 1 * u)),
+        () => giveResources(sugar = PlayerGatherSugarClickAmount),
       ),
       child.maybe <-- ifUnlockedOpt(_.canLayEggs) {
         actionButton(
           name = "Lay Egg",
           Val(None),
           Actions.layEggActionEnabled,
-          Val(None),
+          Val(Some(div("Ants require a constant sugar supply to stay alive."))),
           Actions.layEggActionCost,
           Val(ActionBonus(eggs = 1 * u)),
           () => Actions.layEggAction(),
         )
       },
-      child.maybe <-- ifUnlockedOpt(_.canBuildNest) {
+      child.maybe <-- ifUnlockedOpt(_.canBuildNestUpgrade) {
         actionButton(
           name = Constants.NestUpgradeName,
           nestSignal.map(_.nestLevel).distinct.map(Some(_)),
           Actions.nestUpgradeEnabled,
           Val(None),
           Actions.nestUpgradeCost,
-          Val(ActionBonus(maxWorkers = 2 * u)),
+          Val(
+            ActionBonus(
+              colonyPoints = Constants.defaultNestLevelColonyPointsSecond,
+              maxWorkers = 2 * u,
+            )
+          ),
           () =>
             useSignalValue[ActionCost](
               owner,
@@ -383,29 +389,36 @@ object MainForm {
         Val(
           div(
             className := "p-1",
-            child <-- descriptionSignal.map { divOpt =>
-              div(
-                divOpt,
-                hr(),
-              )
+            child.maybe <-- descriptionSignal.map {
+              _.map { descriptionDiv =>
+                div(
+                  className := "text-center",
+                  maxWidth.px := 350,
+                  descriptionDiv,
+                  hr(),
+                )
+              }
             },
             child <-- costSignal.map { cost =>
               div(
-                className := "d-flex justify-content-center",
-                ifGreater0(cost.sugars)(prettyNumberSimple("", cost.sugars, " sugars")),
-                ifGreater0(cost.buildPower)(
-                  prettyNumberSimple("", cost.buildPower, " build power")
-                ),
+                className := "d-flex flex-column justify-content-center text-center",
+                ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
+                ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
               )
+            },
+            child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
+              if (cost == ActionCost.empty || bonus == ActionBonus.empty)
+                None
+              else
+                Some(hr())
             },
             child <-- bonusSignal.map { bonus =>
               div(
-                hr(),
-                className := "d-flex justify-content-center",
-                ifGreater0(bonus.eggs)(prettyNumberSimple("+", bonus.eggs, " eggs")),
-                ifGreater0(bonus.maxWorkers)(
-                  prettyNumberSimple("+", bonus.maxWorkers, " max workers")
-                ),
+                className := "d-flex flex-column justify-content-center text-center",
+                ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
+                ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
+                ifGreater0(bonus.colonyPoints)(prettyNumberSimple("+", _, " colony points")),
+                ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
               )
             },
           )

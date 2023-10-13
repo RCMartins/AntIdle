@@ -19,12 +19,12 @@ object UnlockUtils {
     5) More ants -> More sugars -> More upgrades -> More ants -> Loop
    */
 
+  // TODO this does not work properly when the game is loaded from a save
   def checkUnlocks(owner: Owner): Unit = {
     unlockSubscription[Long](
-      sugarsSignal,
+      sugarSignal,
       _ >= 5 * u,
       _ => {
-        addMessage("We can now feed our starving queen!")
         Var.update(
           unlocksData -> ((_: Unlocks).copy(canLayEggs = true)),
         )
@@ -39,6 +39,7 @@ object UnlockUtils {
           unlocksData -> ((_: Unlocks).copy(antTasksUnlocked = true)),
           antsData -> ((_: AntsData).unlockTask(AntTask.SugarCollector)),
         )
+        addMessage("We should give our ants some tasks to do. Let's start with collecting sugars.")
       }
     )(owner)
 
@@ -47,8 +48,9 @@ object UnlockUtils {
       _ >= 5 * u,
       _ => {
         Var.update(
-          unlocksData -> ((_: Unlocks).copy(canBuildNest = true)),
+          unlocksData -> ((_: Unlocks).copy(canBuildNestUpgrade = true)),
         )
+        addMessage("We should upgrade our nest to be able to hold more ants.")
       }
     )(owner)
 
@@ -60,6 +62,7 @@ object UnlockUtils {
           unlocksData -> ((_: Unlocks).copy(buildQueueUnlocked = true)),
           antsData -> ((_: AntsData).unlockTask(AntTask.NestBuilder)),
         )
+        addMessage("Assign some of our ants as builders.")
       }
     )(owner)
 
@@ -70,6 +73,7 @@ object UnlockUtils {
         Var.update(
           unlocksData -> ((_: Unlocks).copy(showColonyPointsResource = true)),
         )
+        addMessage("We can now upgrade our ants and our nest using colony points.")
       }
     )(owner)
   }
