@@ -79,6 +79,44 @@ object TickUpdater {
             colonyPoints =
               allData.nestAttributes.nestLevel * Constants.defaultNestLevelColonyPointsTick,
           )
+        },
+        allData => {
+          val sugarUpkeep = (allData.ants.workers / u) * Constants.antsSugarUpkeepTick
+          val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
+
+          allData
+            .modify(_.basicResources.sugar)
+            .setTo(Math.max(0, sugarRemaining))
+            .pipe { allData =>
+              if (sugarRemaining >= 0)
+                allData
+                  .modify(_.ants.sugarCumulativeDebt)
+                  .using {
+                    case debt if debt > 0 => Math.max(0, debt - sugarRemaining / 2)
+                    case _                => 0
+                  }
+              else
+                allData
+                  .modify(_.ants.sugarCumulativeDebt)
+                  .using { sugarCumulativeDebt => sugarCumulativeDebt - sugarRemaining }
+                  .pipe { allData =>
+                    if (Constants.antDeathThisTick(allData.ants.sugarCumulativeDebt))
+                      allData
+                        .addMessage("An ant died of starvation")
+                        .modify(_.ants.workers)
+                        .using(_ - 1 * u)
+                        .modify(_.ants)
+                        .using { antsData =>
+                          val Minus1u = -1 * u
+                          antsData.idleWorkersCount match {
+                            case Minus1u => antsData.remove1WorkerFromLastTask
+                            case _       => antsData
+                          }
+                        }
+                    else
+                      allData
+                  }
+            }
         }
       )
 

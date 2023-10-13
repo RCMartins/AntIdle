@@ -12,19 +12,35 @@ object Constants {
 
   val PlayerGatherSugarClickAmount: Long = 1 * u
   val (defaultTaskCollectSugarTick: Long, defaultTaskCollectSugarSecond: Long) =
-    tickAndSeconds((0.1 * u).toLong)
+    tickAndSeconds((0.5 * u).toLong)
 
   val (defaultTaskBuildPowerTick: Long, defaultTaskBuildPowerSecond: Long) =
-    tickAndSeconds((0.2 * u).toLong)
+    tickAndSeconds((1.0 * u).toLong)
 
   val (defaultNestLevelColonyPointsTick: Long, defaultNestLevelColonyPointsSecond: Long) =
-    tickAndSeconds((0.1 * u).toLong)
+    tickAndSeconds((0.5 * u).toLong)
 
-  private def tickAndSeconds(tickValue: Long): (Long, Long) =
-    (tickValue, tickValue * TicksPerSecond)
+  val (antsSugarUpkeepTick: Long, antsSugarUpkeepSecond: Long) =
+    tickAndSeconds((0.25 * u).toLong)
+
+  val AntDeathRiskThreshold: Long = 10 * u
+
+  private def tickAndSeconds(perSecondValue: Long): (Long, Long) =
+    (perSecondValue / TicksPerSecond, perSecondValue)
 
   val NestUpgradeName = "Expand Nest"
 
-  val exponent1_25: IndexedSeq[Double] = (0 to 100).map(Math.pow(1.25, _))
+  private val MaxExponent = 100
+  val exponent0_95: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(0.95, _))
+  val exponent1_25: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.25, _))
+
+  def antDeathThisTick(sugarCumulativeDebt: Long): Boolean =
+    if (sugarCumulativeDebt < AntDeathRiskThreshold) false
+    else if (sugarCumulativeDebt > AntDeathRiskThreshold * MaxExponent) true
+    else {
+      val exponent = (sugarCumulativeDebt / AntDeathRiskThreshold).toInt
+      val chance = exponent0_95(exponent)
+      Math.random() > chance
+    }
 
 }
