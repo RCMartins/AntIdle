@@ -4,7 +4,8 @@ import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import org.scalajs.dom.{HTMLDivElement, HTMLSpanElement, MouseEvent}
+import org.scalajs.dom
+import org.scalajs.dom.{window, HTMLDivElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad}
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.model.{ActionBonus, ActionCost, AntTask, BuildTask}
@@ -47,22 +48,37 @@ object MainForm {
   private val NestWidth = 800
   private val MessagesWidth = 500
 
+  private val windowWidthVar: Var[Long] = Var(1000)
+  private val windowWidthLimit: Long = 800
+
   def apply(): ReactiveHtmlElement[HTMLDivElement] = {
     val owner = new OneTimeOwner(() => println("MainForm owner is being called after dispose"))
+
+    dom.window.addEventListener(
+      "resize",
+      (_: dom.Event) => {
+        Var.set(
+          windowWidthVar -> window.innerWidth.toLong
+        )
+      }
+    )
+
     initialize()
+
     div(
       className := "m-2",
       className := "d-flex justify-content-start",
       className := "fs-4",
+      className.toggle("flex-column") <-- windowWidthVar.signal.map(_ < windowWidthLimit),
       div(
         resourcesDiv,
       ),
       div(
         className := "card m-1",
+        width.px := NestWidth,
+        maxWidth.px := NestWidth,
         div(
           className := "card-header",
-          width.px := NestWidth,
-          maxWidth.px := NestWidth,
           ul(
             className := "nav nav-tabs card-tabs",
             role := "tablist",
@@ -94,6 +110,19 @@ object MainForm {
                 )
               )
             ),
+            child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
+              li(
+                className := "nav-item",
+                a(
+                  className := "nav-link",
+                  idAttr := "profile-tab",
+                  dataAttr("bs-toggle") := "tab",
+                  href := "#upgradesContent",
+                  role := "tab",
+                  "Upgrades",
+                )
+              )
+            ),
           )
         ),
         div(
@@ -112,6 +141,14 @@ object MainForm {
                 idAttr := "tasksContent",
                 role := "tabpanel",
                 tasksDiv,
+              )
+            ),
+            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+              div(
+                className := "tab-pane",
+                idAttr := "upgradesContent",
+                role := "tabpanel",
+                upgradesDiv,
               )
             ),
           )
@@ -139,7 +176,10 @@ object MainForm {
               }
         )
       }),
-      tooltip
+      tooltip,
+      onMountCallback { _ =>
+        windowWidthVar.set(window.innerWidth.toLong)
+      },
     )
   }
 
@@ -251,20 +291,20 @@ object MainForm {
           "Colony Points",
           colonyPointsSignal,
           Val(0),
-          unlocksSignal.map(_.showColonyPointsResource).distinct,
+          unlocksSignal.map(_.resources.showColonyPoints).distinct,
         ),
         nbsp,
         child.maybe <-- createResourceDiv(
           "Eggs",
           eggsCountSignal,
           maxEggs,
-          unlocksSignal.map(_.layedFirstEgg)
+          unlocksSignal.map(_.resources.showEggs)
         ),
         child.maybe <-- createResourceDiv(
           "Workers",
           workersSignal,
           maxWorkers,
-          unlocksSignal.map(_.bornFirstWorker)
+          unlocksSignal.map(_.resources.showWorkers)
         ),
       )
     )
@@ -320,7 +360,7 @@ object MainForm {
         Val(ActionBonus(sugar = 1 * u)),
         () => giveResources(sugar = PlayerGatherSugarClickAmount),
       ),
-      child.maybe <-- ifUnlockedOpt(_.canLayEggs) {
+      child.maybe <-- ifUnlockedOpt(_.actions.canLayEggs) {
         actionButton(
           name = "Lay Egg",
           Val(None),
@@ -331,7 +371,7 @@ object MainForm {
           () => Actions.layEggAction(),
         )
       },
-      child.maybe <-- ifUnlockedOpt(_.canBuildNestUpgrade) {
+      child.maybe <-- ifUnlockedOpt(_.actions.canBuildNestUpgrade) {
         actionButton(
           name = Constants.NestUpgradeName,
           nestSignal.map(_.nestLevel).distinct.map(Some(_)),
@@ -416,7 +456,9 @@ object MainForm {
                 className := "d-flex flex-column justify-content-center text-center",
                 ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
                 ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
-                ifGreater0(bonus.colonyPoints)(prettyNumberSimple("+", _, " colony points/worker/s")),
+                ifGreater0(bonus.colonyPoints)(
+                  prettyNumberSimple("+", _, " colony points/worker/s")
+                ),
                 ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
               )
             },
@@ -457,7 +499,7 @@ object MainForm {
       idAttr := id,
       className := "row",
       span(
-        className := "col-5",
+        className := "col-6",
         antTask match {
           case AntTask.SugarCollector => "Sugar Collector"
           case AntTask.WaterCollector => "Water Collector"
@@ -492,8 +534,16 @@ object MainForm {
           onClick --> { _ => Actions.incrementAntTask(antTask) }
         ),
       ),
-      div(className := "col-5"),
+      div(className := "col-4"),
     ).amendThis(elem => setTooltip(elem, tooltipSignal))
   }
+
+  private def upgradesDiv: ReactiveHtmlElement[HTMLDivElement] =
+    div(
+      className := "d-grid gap-2",
+      span(
+        "TODO",
+      ),
+    )
 
 }

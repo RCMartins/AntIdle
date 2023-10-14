@@ -3,6 +3,7 @@ package pt.rcmartins.antidle.game
 import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
+import org.scalajs.dom
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
 
@@ -21,6 +22,8 @@ object Utils {
   val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
   val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
   val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
+  val upgradesData: Var[UpgradesData] = Var(UpgradesData.initial)
+  val upgradesSignal: Signal[UpgradesData] = upgradesData.signal.distinct
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
 
@@ -64,8 +67,14 @@ object Utils {
 
 //  val lastMessage: Signal[Option[String]] = messagesSeq.signal.map(_.headOption)
 
-  val antTasksUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.antTasksUnlocked).distinct
-  val buildQueueUnlockedSignal: Signal[Boolean] = unlocksSignal.map(_.buildQueueUnlocked).distinct
+  val antTasksUnlockedSignal: Signal[Boolean] =
+    unlocksSignal.map(_.tabs.antTasksUnlocked).distinct
+
+  val buildQueueUnlockedSignal: Signal[Boolean] =
+    unlocksSignal.map(_.tabs.buildQueueUnlocked).distinct
+
+  val upgradesTabUnlockedSignal: Signal[Boolean] =
+    unlocksSignal.map(_.tabs.upgradesTabUnlocked).distinct
 
   val updateBus: EventBus[Unit] = new EventBus()
   val ticksBus: EventBus[Unit] = new EventBus()
@@ -78,6 +87,7 @@ object Utils {
     setInterval(200)(updateState())
     UnlockUtils.checkUnlocks(owner)
     addMessage("We should collect some sugar to feed our queen.")
+
   }
 
   def addMessage(message: String): Unit =
@@ -108,12 +118,13 @@ object Utils {
         resourcesSignal,
         nestAttributesData,
         unlocksData,
+        upgradesData,
         messagesSeq,
       )
-      .foreach { case (world, queen, ants, basic, next, unlocks, messages) =>
+      .foreach { case (world, queen, ants, basic, next, unlocks, upgrades, messages) =>
         val ticksToUpdate = world.targetTick - world.currentTick
         if (ticksToUpdate > 0) {
-          val allData = AllData.simple(world, queen, ants, basic, next, unlocks, messages)
+          val allData = AllData.simple(world, queen, ants, basic, next, unlocks, upgrades, messages)
 
           @tailrec
           def loop(ticksLeft: Long, allData: AllData): AllData =
@@ -136,10 +147,11 @@ object Utils {
         resourcesSignal,
         nestAttributesData,
         unlocksData,
+        upgradesData,
         messagesSeq,
       )
-      .foreach { case (actionFunc, world, queen, ants, basic, next, unlocks, messages) =>
-        val allData = AllData.simple(world, queen, ants, basic, next, unlocks, messages)
+      .foreach { case (actionFunc, world, queen, ants, basic, next, unlocks, upgrades, messages) =>
+        val allData = AllData.simple(world, queen, ants, basic, next, unlocks, upgrades, messages)
         actionFunc(allData).updateVars()
       }(owner)
 

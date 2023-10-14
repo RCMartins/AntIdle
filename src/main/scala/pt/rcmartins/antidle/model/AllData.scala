@@ -14,6 +14,7 @@ case class AllData(
     basicResources: BasicResources,
     nestAttributes: NestAttributes,
     unlocks: Unlocks,
+    upgrades: UpgradesData,
     messages: Seq[String],
 ) {
 
@@ -32,6 +33,7 @@ case class AllData(
       basicResourcesData -> basicResources,
       nestAttributesData -> nestAttributes,
       unlocksData -> unlocks,
+      upgradesData -> upgrades,
       messagesSeq -> messages,
     )
 
@@ -56,6 +58,7 @@ object AllData {
       basic: BasicResources,
       next: NestAttributes,
       unlocks: Unlocks,
+      upgrades: UpgradesData,
       messages: Seq[String]
   ): AllData =
     AllData(
@@ -66,6 +69,7 @@ object AllData {
       basicResources = basic,
       nestAttributes = next,
       unlocks = unlocks,
+      upgrades = upgrades,
       messages = messages,
     )
 

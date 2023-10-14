@@ -14,12 +14,10 @@ object TickUpdater {
         allData => allData.modify(_.world.currentTick).using(_ + 1),
         allData => {
           val currentTick = allData.world.currentTick
-          val unlocks = allData.unlocks
 
           val updatedEggsAndLarvae: Seq[Either[Unit, AntBrood]] =
             allData.ants.eggsAndLarvae.map {
-              case AntBrood.Egg(tick)
-                  if !unlocks.larvaeUnlocked && currentTick >= tick + AntBrood.defaultTicksToLarva =>
+              case AntBrood.Egg(tick) if currentTick >= tick + AntBrood.defaultTicksToLarva =>
                 Left(())
               case other =>
                 Right(other)
@@ -31,8 +29,6 @@ object TickUpdater {
             .setTo(updatedEggsAndLarvae.flatMap(_.toOption))
             .modify(_.ants.workers)
             .usingIf(newWorkers > 0)(_ + newWorkers)
-            .modify(_.unlocks.bornFirstWorker)
-            .setToIf(newWorkers > 0)(true)
         },
         allData => {
           def countWorkers(task: AntTask): Long =
