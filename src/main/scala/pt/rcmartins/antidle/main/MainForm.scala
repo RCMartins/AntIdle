@@ -49,7 +49,8 @@ object MainForm {
   private val MessagesWidth = 500
 
   private val windowWidthVar: Var[Long] = Var(1000)
-  private val windowWidthLimit: Long = 800
+  private val windowWidthLimit: Long =
+    ResourcesWidth + NestWidth + MessagesWidth
 
   def apply(): ReactiveHtmlElement[HTMLDivElement] = {
     val owner = new OneTimeOwner(() => println("MainForm owner is being called after dispose"))
