@@ -1,9 +1,8 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.u
-import pt.rcmartins.antidle.model.{AntBrood, AntTask, BuildTask}
+import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask}
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -76,12 +75,13 @@ object TickUpdater {
         },
         allData => {
           allData.giveResources(
-            colonyPoints =
-              allData.nestAttributes.nestLevel * Constants.defaultNestLevelColonyPointsTick,
+            colonyPoints = allData.nestAttributes.nestLevel *
+              allData.ants.workersLong *
+              Constants.defaultNestLevelColonyPointsTick,
           )
         },
         allData => {
-          val sugarUpkeep = (allData.ants.workers / u) * Constants.antsSugarUpkeepTick
+          val sugarUpkeep = allData.ants.workersLong * Constants.antsSugarUpkeepTick
           val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
 
           allData
@@ -107,11 +107,10 @@ object TickUpdater {
                         .using(_ - 1 * u)
                         .modify(_.ants)
                         .using { antsData =>
-                          val Minus1u = -1 * u
-                          antsData.idleWorkersCount match {
-                            case Minus1u => antsData.remove1WorkerFromLastTask
-                            case _       => antsData
-                          }
+                          if (antsData.idleWorkersCount < 0)
+                            antsData.remove1WorkerFromLastTask
+                          else
+                            antsData
                         }
                     else
                       allData

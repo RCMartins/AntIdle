@@ -5,12 +5,11 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.{HTMLDivElement, HTMLSpanElement, MouseEvent}
-import pt.rcmartins.antidle.game.Constants
+import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad}
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.model.{ActionBonus, ActionCost, AntTask, BuildTask}
-import pt.rcmartins.antidle.utils.UIUtils._
-import pt.rcmartins.antidle.utils.Utils._
-import pt.rcmartins.antidle.utils.{Actions, SaveLoad}
+import pt.rcmartins.antidle.game.UIUtils._
+import pt.rcmartins.antidle.game.Utils._
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -417,7 +416,7 @@ object MainForm {
                 className := "d-flex flex-column justify-content-center text-center",
                 ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
                 ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
-                ifGreater0(bonus.colonyPoints)(prettyNumberSimple("+", _, " colony points")),
+                ifGreater0(bonus.colonyPoints)(prettyNumberSimple("+", _, " colony points/worker/s")),
                 ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
               )
             },

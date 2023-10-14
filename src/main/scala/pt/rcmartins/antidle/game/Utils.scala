@@ -1,12 +1,10 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
-import pt.rcmartins.antidle.utils.Utils.messagesSeq
 
 import scala.annotation.tailrec
 import scala.scalajs.js.timers.setInterval

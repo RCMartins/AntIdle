@@ -18,7 +18,7 @@ object Constants {
     tickAndSeconds((1.0 * u).toLong)
 
   val (defaultNestLevelColonyPointsTick: Long, defaultNestLevelColonyPointsSecond: Long) =
-    tickAndSeconds((0.5 * u).toLong)
+    tickAndSeconds((0.02 * u).toLong)
 
   val (antsSugarUpkeepTick: Long, antsSugarUpkeepSecond: Long) =
     tickAndSeconds((0.25 * u).toLong)
@@ -36,7 +36,7 @@ object Constants {
 
   def antDeathThisTick(sugarCumulativeDebt: Long): Boolean =
     if (sugarCumulativeDebt < AntDeathRiskThreshold) false
-    else if (sugarCumulativeDebt > AntDeathRiskThreshold * MaxExponent) true
+    else if (sugarCumulativeDebt >= AntDeathRiskThreshold * (MaxExponent - 1)) true
     else {
       val exponent = (sugarCumulativeDebt / AntDeathRiskThreshold).toInt
       val chance = exponent0_95(exponent)

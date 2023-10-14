@@ -1,10 +1,9 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.model
 
 import com.raquo.airstream.state.Var
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.model._
-import pt.rcmartins.antidle.utils.AllData.MaxMessages
-import pt.rcmartins.antidle.utils.Utils._
+import pt.rcmartins.antidle.model.AllData.MaxMessages
+import pt.rcmartins.antidle.game.Utils._
 import zio.json._
 
 case class AllData(

@@ -1,10 +1,10 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import com.raquo.airstream.ownership.Subscription
 import com.raquo.laminar.api.L.{u => _, _}
 import pt.rcmartins.antidle.game.Constants.u
-import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, NestAttributes, Unlocks}
-import pt.rcmartins.antidle.utils.Utils._
+import pt.rcmartins.antidle.game.Utils._
+import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, Unlocks}
 
 object UnlockUtils {
 

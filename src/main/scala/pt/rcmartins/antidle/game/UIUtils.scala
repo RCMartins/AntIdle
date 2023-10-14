@@ -1,4 +1,4 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.nodes.ReactiveHtmlElement

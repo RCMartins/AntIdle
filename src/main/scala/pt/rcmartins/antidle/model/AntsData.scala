@@ -13,6 +13,8 @@ case class AntsData(
   val idleWorkersCount: Long =
     workers - tasks.map(_._2).sum
 
+  val workersLong: Long = workers / u
+
   def unlockTask(antTask: AntTask): AntsData =
     if (tasks.exists(_._1 == antTask))
       this

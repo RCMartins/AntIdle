@@ -1,6 +1,7 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import org.scalajs.dom.window.localStorage
+import pt.rcmartins.antidle.model.AllData
 import zio.json._
 
 object SaveLoad {

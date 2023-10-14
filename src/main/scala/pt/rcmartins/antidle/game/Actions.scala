@@ -1,11 +1,10 @@
-package pt.rcmartins.antidle.utils
+package pt.rcmartins.antidle.game
 
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants._
+import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.model.{ActionCost, AntBrood, AntTask, BuildTask}
-import pt.rcmartins.antidle.utils.Utils._
 
 object Actions {
 
