@@ -1,9 +1,11 @@
 package pt.rcmartins.antidle.model
 
+import pt.rcmartins.antidle.game.Constants.u
 import zio.json._
 
 case class UpgradesData(
-    queensChamberUpgrade: UpgradeData,
+    queensChamber: UpgradeData,
+    improveSugarCollectorTask: UpgradeData,
 )
 
 object UpgradesData {
@@ -13,7 +15,9 @@ object UpgradesData {
 
   val initial: UpgradesData =
     UpgradesData(
-      queensChamberUpgrade = UpgradeData(cost = ActionCost(sugar = 100, colonyPoints = 50)),
+      queensChamber = UpgradeData(cost = ActionCost(colonyPoints = 50 * u)),
+      improveSugarCollectorTask =
+        UpgradeData(cost = ActionCost(sugar = 100 * u, colonyPoints = 100 * u)),
     )
 
 }

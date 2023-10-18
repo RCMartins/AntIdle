@@ -51,9 +51,13 @@ object TickUpdater {
                 (other, None)
             }
 
+          val sugarBonusMultiplier: Double =
+            if (allData.upgrades.improveSugarCollectorTask.unlocked) 1.15 else 1.0
+
           allData
             .giveResources(
-              sugar = sugarWorkers * Constants.defaultTaskCollectSugarTick,
+              sugar =
+                (sugarWorkers * Constants.defaultTaskCollectSugarTick * sugarBonusMultiplier).toLong,
             )
             .modify(_.nestAttributes.buildQueue)
             .setToIf(buildWorkers > 0)(updatedBuildQueue)
@@ -65,6 +69,12 @@ object TickUpdater {
                     .modify(_.nestAttributes.nestLevel)
                     .using(_ + 1)
                     .modify(_.nestAttributes.maxWorkers)
+                    .using(_ + 2 * u)
+                case Some(BuildTask.QueenChamber(_)) =>
+                  allData
+                    .modify(_.nestAttributes.chambers.queenChamber.level)
+                    .using(_ + 1)
+                    .modify(_.nestAttributes.maxEggs)
                     .using(_ + 2 * u)
               }
             }

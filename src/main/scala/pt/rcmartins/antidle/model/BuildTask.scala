@@ -4,9 +4,17 @@ import zio.json._
 
 sealed trait BuildTask {
 
-  def useBuildPower(buildPower: Long): BuildTask
+  type T <: BuildTask
 
-  def isFinished: Boolean
+  def buildPowerRequired: Long
+
+  def newInstance(newBuildPower: Long): T
+
+  def useBuildPower(buildPower: Long): T =
+    newInstance(Math.max(0L, buildPowerRequired - buildPower))
+
+  def isFinished: Boolean =
+    buildPowerRequired == 0
 
 }
 
@@ -17,11 +25,19 @@ object BuildTask {
 
   case class NestUpgrade(buildPowerRequired: Long) extends BuildTask {
 
-    override def useBuildPower(buildPower: Long): BuildTask =
-      copy(buildPowerRequired = Math.max(0L, buildPowerRequired - buildPower))
+    type T = NestUpgrade
 
-    override def isFinished: Boolean =
-      buildPowerRequired == 0
+    override def newInstance(newBuildPower: Long): T =
+      copy(buildPowerRequired = newBuildPower)
+
+  }
+
+  case class QueenChamber(buildPowerRequired: Long) extends BuildTask {
+
+    type T = QueenChamber
+
+    override def newInstance(newBuildPower: Long): T =
+      copy(buildPowerRequired = newBuildPower)
 
   }
 

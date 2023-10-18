@@ -8,7 +8,25 @@ case class BasicResources(
     water: Long,
     colonyPoints: Long,
     DNA: Long,
-)
+) {
+
+  def spendResources(actionCost: ActionCost): BasicResources =
+    copy(
+      sugar = sugar - actionCost.sugar,
+      proteins = proteins - actionCost.proteins,
+      water = water - actionCost.water,
+      colonyPoints = colonyPoints - actionCost.colonyPoints,
+      DNA = DNA - actionCost.DNA,
+    )
+
+  def hasResources(cost: ActionCost): Boolean =
+    sugar >= cost.sugar &&
+      proteins >= cost.proteins &&
+      water >= cost.water &&
+      colonyPoints >= cost.colonyPoints &&
+      DNA >= cost.DNA
+
+}
 
 object BasicResources {
 

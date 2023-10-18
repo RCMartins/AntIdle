@@ -69,4 +69,37 @@ object Actions {
         .using(_ :+ buildTask)
     }
 
+  def unlockQueenChamberUpgrade(actionCost: ActionCost): Unit =
+    actionUpdater.writer.onNext { allData =>
+      allData
+        .modify(_.basicResources)
+        .using(_.spendResources(actionCost))
+        .modify(_.upgrades.queensChamber.unlocked)
+        .setTo(true)
+        .modify(_.unlocks.actions.canBuildQueenChamber)
+        .setTo(true)
+    }
+
+  def unlockImproveSugarCollectorTask(actionCost: ActionCost): Unit =
+    actionUpdater.writer.onNext { allData =>
+      allData
+        .modify(_.basicResources)
+        .using(_.spendResources(actionCost))
+        .modify(_.upgrades.improveSugarCollectorTask.unlocked)
+        .setTo(true)
+    }
+
+  val queenChamberCost: Signal[ActionCost] =
+    chambersSignal
+      .map(_.queenChamber.level)
+      .distinct
+      .map(level => ActionCost(buildPower = (25 * u * exponent1_25(level)).floor.toLong))
+
+  val queenChamberBuyEnabled: Signal[Boolean] =
+    buildQueueSignal
+      .combineWith(maxBuildQueueSignal)
+      .map { case (buildQueue, maxBuildQueue) =>
+        buildQueue.size < maxBuildQueue
+      }
+
 }

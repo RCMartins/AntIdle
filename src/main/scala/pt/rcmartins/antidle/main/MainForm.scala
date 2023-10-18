@@ -6,11 +6,11 @@ import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom
 import org.scalajs.dom.{window, HTMLDivElement, HTMLSpanElement, MouseEvent}
-import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad}
 import pt.rcmartins.antidle.game.Constants._
-import pt.rcmartins.antidle.model.{ActionBonus, ActionCost, AntTask, BuildTask}
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
+import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad}
+import pt.rcmartins.antidle.model._
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -22,7 +22,7 @@ object MainForm {
   private val tooltipX: Var[Int] = Var(0)
   private val tooltipY: Var[Int] = Var(0)
 
-  private val tooltip =
+  private val tooltip: ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "card p-1",
       position.absolute,
@@ -149,7 +149,7 @@ object MainForm {
                 className := "tab-pane",
                 idAttr := "upgradesContent",
                 role := "tabpanel",
-                upgradesDiv,
+                upgradesDiv(owner),
               )
             ),
           )
@@ -213,11 +213,14 @@ object MainForm {
     )
 
   private def buildQueueDiv: ReactiveHtmlElement[HTMLDivElement] = {
-    def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] =
-      buildTask match {
-        case BuildTask.NestUpgrade(buildPowerRequired) =>
-          span(Constants.NestUpgradeName, " [", prettyNumber1d(buildPowerRequired), "]")
-      }
+    def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] = {
+      val name: String =
+        buildTask match {
+          case _: BuildTask.NestUpgrade  => Constants.NestUpgradeName
+          case _: BuildTask.QueenChamber => Constants.QueenChamberName
+        }
+      span(name, " [", prettyNumber1d(buildTask.buildPowerRequired), "]")
+    }
 
     div(
       className := "m-1",
@@ -381,7 +384,7 @@ object MainForm {
           Actions.nestUpgradeCost,
           Val(
             ActionBonus(
-              colonyPoints = Constants.defaultNestLevelColonyPointsSecond,
+              colonyPointsEachWorker = Constants.defaultNestLevelColonyPointsSecond,
               maxWorkers = 2 * u,
             )
           ),
@@ -390,6 +393,26 @@ object MainForm {
               owner,
               Actions.nestUpgradeCost,
               actionCost => Actions.addBuildTask(BuildTask.NestUpgrade(actionCost.buildPower))
+            ),
+        )
+      },
+      child.maybe <-- ifUnlockedOpt(_.actions.canBuildQueenChamber) {
+        actionButton(
+          name = Constants.QueenChamberName,
+          nestSignal.map(_.chambers.queenChamber.level).map(Some(_)),
+          Actions.queenChamberBuyEnabled,
+          Val(None),
+          Actions.queenChamberCost,
+          Val(
+            ActionBonus(
+              maxEggs = 2 * u,
+            )
+          ),
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              Actions.queenChamberCost,
+              actionCost => Actions.addBuildTask(BuildTask.QueenChamber(actionCost.buildPower))
             ),
         )
       },
@@ -444,6 +467,7 @@ object MainForm {
                 className := "d-flex flex-column justify-content-center text-center",
                 ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
                 ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
+                ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
               )
             },
             child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
@@ -457,9 +481,11 @@ object MainForm {
                 className := "d-flex flex-column justify-content-center text-center",
                 ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
                 ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
-                ifGreater0(bonus.colonyPoints)(
+                ifGreater0(bonus.colonyPointsEachWorker)(
                   prettyNumberSimple("+", _, " colony points/worker/s")
                 ),
+                ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
+                ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
                 ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
               )
             },
@@ -539,12 +565,47 @@ object MainForm {
     ).amendThis(elem => setTooltip(elem, tooltipSignal))
   }
 
-  private def upgradesDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def upgradesDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+    def createUpgrade(
+        name: String,
+        upgradeFunc: UpgradesData => UpgradeData,
+        description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
+        unlock: ActionCost => Unit,
+    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
+      val costSignal: Signal[ActionCost] = upgradesSignal.map(upgradeFunc(_).cost)
+      ifUpgradeReadyToBuyOpt(upgradeFunc) {
+        actionButton(
+          name = name,
+          Val(None),
+          hasResourcesSignal(costSignal),
+          description,
+          costSignal,
+          Val(ActionBonus.empty),
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              costSignal,
+              actionCost => unlock(actionCost)
+            ),
+        )
+      }
+    }
+
     div(
-      className := "d-grid gap-2",
-      span(
-        "TODO",
+      className := "row",
+      child.maybe <-- createUpgrade(
+        name = "Unlock Queen chamber",
+        _.queensChamber,
+        description = Val(Some(div("Improves the queen's chamber abilities."))),
+        unlock = Actions.unlockQueenChamberUpgrade,
+      ),
+      child.maybe <-- createUpgrade(
+        name = "Foraging Techniques",
+        _.improveSugarCollectorTask,
+        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
+        unlock = Actions.unlockImproveSugarCollectorTask,
       ),
     )
+  }
 
 }

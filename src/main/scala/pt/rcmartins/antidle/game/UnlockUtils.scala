@@ -9,17 +9,6 @@ import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, Unlocks, Upgrad
 
 object UnlockUtils {
 
-  /*
-  Player tasks:
-    1) Manually collect 10 sugars
-    2) Manually lay 1 egg
-      2.1) Wait until egg hatches -> Unlock tasks tab
-      2.2) Start collecting sugars passively using workers
-    3) Collect sugars / laying eggs until having a total of 5 workers -> Unlock upgrades tab
-    4) Upgrade nest (requires building power?)
-    5) More ants -> More sugars -> More upgrades -> More ants -> Loop
-   */
-
   // TODO this does not work properly when the game is loaded from a save
   def checkUnlocks(owner: Owner): Unit = {
     unlockSubscription[Long](
@@ -57,7 +46,7 @@ object UnlockUtils {
     )(owner)
 
     unlockSubscription[Long](
-      workersSignal,
+      antAndBroodCount,
       _ >= 5 * u,
       _ => {
         Var.update(
@@ -88,7 +77,10 @@ object UnlockUtils {
             ((_: Unlocks)
               .modifyAll(_.resources.showColonyPoints, _.tabs.upgradesTabUnlocked)
               .setTo(true)),
-          upgradesData -> ((_: UpgradesData).modify(_.queensChamberUpgrade.unlocked).setTo(true)),
+          upgradesData ->
+            ((_: UpgradesData)
+              .modifyAll(_.queensChamber.show, _.improveSugarCollectorTask.show)
+              .setTo(true)),
         )
         addMessage("We can now upgrade our ants and our nest using colony points.")
       }

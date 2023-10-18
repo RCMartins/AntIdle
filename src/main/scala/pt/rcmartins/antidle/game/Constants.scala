@@ -29,6 +29,7 @@ object Constants {
     (perSecondValue / TicksPerSecond, perSecondValue)
 
   val NestUpgradeName = "Expand Nest"
+  val QueenChamberName = "Queen Chamber"
 
   private val MaxExponent = 100
   val exponent0_95: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(0.95, _))

@@ -3,7 +3,6 @@ package pt.rcmartins.antidle.game
 import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
-import org.scalajs.dom
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model._
 
@@ -20,6 +19,7 @@ object Utils {
   val resourcesSignal: Signal[BasicResources] = basicResourcesData.signal
   val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
   val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
+  val chambersSignal: Signal[AllChamberData] = nestSignal.map(_.chambers).distinct
   val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
   val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
   val upgradesData: Var[UpgradesData] = Var(UpgradesData.initial)
@@ -170,6 +170,25 @@ object Utils {
     signal.distinct.map {
       case false => None
       case true  => Some(value)
+    }
+
+  def ifUpgradeReadyToBuyOpt[A](
+      upgradeFunc: UpgradesData => UpgradeData
+  )(value: => A): Signal[Option[A]] =
+    upgradesSignal
+      .map { upgrades =>
+        val upgrade = upgradeFunc(upgrades)
+        upgrade.show && !upgrade.unlocked
+      }
+      .distinct
+      .map {
+        case false => None
+        case true  => Some(value)
+      }
+
+  def hasResourcesSignal(costSignal: Signal[ActionCost]): Signal[Boolean] =
+    resourcesSignal.combineWith(costSignal).map { case (resources, cost) =>
+      resources.hasResources(cost)
     }
 
   def ifGreater0[A](compareValue: Long)(func: Long => A): Option[A] =
