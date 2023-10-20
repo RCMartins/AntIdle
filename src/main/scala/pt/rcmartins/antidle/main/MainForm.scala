@@ -99,7 +99,7 @@ object MainForm {
                 className := "nav-item",
                 a(
                   className := "nav-link",
-                  idAttr := "profile-tab",
+                  idAttr := "tasks-tab",
                   dataAttr("bs-toggle") := "tab",
                   href := "#tasksContent",
                   role := "tab",
@@ -116,12 +116,23 @@ object MainForm {
                 className := "nav-item",
                 a(
                   className := "nav-link",
-                  idAttr := "profile-tab",
+                  idAttr := "upgrades-tab",
                   dataAttr("bs-toggle") := "tab",
                   href := "#upgradesContent",
                   role := "tab",
                   "Upgrades",
                 )
+              )
+            ),
+            li(
+              className := "nav-item",
+              a(
+                className := "nav-link",
+                idAttr := "settings-tab",
+                dataAttr("bs-toggle") := "tab",
+                href := "#settingsContent",
+                role := "tab",
+                "Settings"
               )
             ),
           )
@@ -152,11 +163,16 @@ object MainForm {
                 upgradesDiv(owner),
               )
             ),
+            div(
+              className := "tab-pane",
+              idAttr := "settingsContent",
+              role := "tabpanel",
+              settingsDiv,
+            ),
           )
         )
       ),
       div(
-        saveLoadDiv,
         child.maybe <-- ifUnlockedOpt(buildQueueUnlockedSignal)(buildQueueDiv),
         messagesDiv,
       ),
@@ -184,37 +200,34 @@ object MainForm {
     )
   }
 
-  private def saveLoadDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def settingsDiv: ReactiveHtmlElement[HTMLDivElement] =
     div(
-      className := "card m-1",
-      div(
-        className := "row m-0",
-        button(
-          className := "btn btn-primary col-5 m-1",
-          className := "fs-4",
-          `type` := "button",
-          "Save",
-          onClick --> { _ =>
-            actionUpdater.writer.onNext(allData => allData.tap(SaveLoad.saveToLocalStorage))
-          }
-        ),
-        button(
-          className := "btn btn-primary col-5 m-1",
-          className := "fs-4",
-          `type` := "button",
-          "Load",
-          onClick --> { _ =>
-            SaveLoad
-              .loadFromLocalStorage()
-              .foreach { loadedAllData =>
-                Utils.pause = true
-                unlocksOwner.killAll()
-                actionUpdater.writer.onNext(_ => loadedAllData)
-                actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
-                Utils.pause = false
-              }
-          }
-        ),
+      className := "d-grid gap-2",
+      button(
+        className := "btn btn-primary col-5 m-1",
+        className := "fs-4",
+        `type` := "button",
+        "Save",
+        onClick --> { _ =>
+          actionUpdater.writer.onNext(allData => allData.tap(SaveLoad.saveToLocalStorage))
+        }
+      ),
+      button(
+        className := "btn btn-primary col-5 m-1",
+        className := "fs-4",
+        `type` := "button",
+        "Load",
+        onClick --> { _ =>
+          SaveLoad
+            .loadFromLocalStorage()
+            .foreach { loadedAllData =>
+              Utils.pause = true
+              unlocksOwner.killAll()
+              actionUpdater.writer.onNext(_ => loadedAllData)
+              actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
+              Utils.pause = false
+            }
+        }
       )
     )
 
