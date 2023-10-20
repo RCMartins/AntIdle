@@ -65,8 +65,7 @@ object Utils {
   val maxBuildQueueSignal: Signal[Int] = nestSignal.map(_.maxBuildQueue).distinct
 
   val messagesSeq: Var[Seq[String]] = Var(Seq.empty)
-
-  val messagesSignal: StrictSignal[Seq[String]] = messagesSeq.signal
+  val messagesSignal: Signal[Seq[String]] = messagesSeq.signal.distinct
 
 //  val lastMessage: Signal[Option[String]] = messagesSeq.signal.map(_.headOption)
 

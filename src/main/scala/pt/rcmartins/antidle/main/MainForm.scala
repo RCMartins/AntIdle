@@ -404,7 +404,7 @@ object MainForm {
           Val(
             ActionBonus(
               colonyPointsEachWorker = Constants.defaultNestLevelColonyPointsSecond,
-              maxWorkers = 2 * u,
+              maxWorkers = Constants.NestUpgradeBonusMaxWorkers,
             )
           ),
           () =>
@@ -424,7 +424,7 @@ object MainForm {
           Actions.queenChamberCost,
           Val(
             ActionBonus(
-              maxEggs = 2 * u,
+              maxEggs = Constants.QueenChamberBonusMaxEggs,
             )
           ),
           () =>

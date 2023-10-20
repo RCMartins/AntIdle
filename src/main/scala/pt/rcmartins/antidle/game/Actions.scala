@@ -53,7 +53,9 @@ object Actions {
     nestSignal
       .map(_.nestLevel)
       .distinct
-      .map(level => ActionCost(buildPower = (20 * u * exponent1_25(level)).floor.toLong))
+      .map(level =>
+        ActionCost(buildPower = (NestUpgradeBaseCost * NestUpgradeMultiplier(level)).floor.toLong)
+      )
 
   val nestUpgradeEnabled: Signal[Boolean] =
     buildQueueSignal

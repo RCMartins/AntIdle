@@ -1,7 +1,6 @@
 package pt.rcmartins.antidle.model
 
-import pt.rcmartins.antidle.game.Constants.u
-import pt.rcmartins.antidle.model.Chamber._
+import pt.rcmartins.antidle.game.Constants._
 import zio.json._
 
 case class NestAttributes(
@@ -31,8 +30,8 @@ object NestAttributes {
       deadAnts = 0,
       detritus = 0,
       maxSugar = 1000 * u,
-      maxEggs = 2 * u,
-      maxWorkers = 5 * u,
+      maxEggs = QueenChamberBonusMaxEggs,
+      maxWorkers = NestUpgradeBonusMaxWorkers,
       maxBuildQueue = 1,
     )
 

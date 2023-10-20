@@ -69,13 +69,13 @@ object TickUpdater {
                     .modify(_.nestAttributes.nestLevel)
                     .using(_ + 1)
                     .modify(_.nestAttributes.maxWorkers)
-                    .using(_ + 2 * u)
+                    .using(_ + Constants.NestUpgradeBonusMaxWorkers)
                 case Some(BuildTask.QueenChamber(_)) =>
                   allData
                     .modify(_.nestAttributes.chambers.queenChamber.level)
                     .using(_ + 1)
                     .modify(_.nestAttributes.maxEggs)
-                    .using(_ + 2 * u)
+                    .using(_ + Constants.QueenChamberBonusMaxEggs)
               }
             }
         },
@@ -108,7 +108,7 @@ object TickUpdater {
                   .pipe { allData =>
                     if (Constants.antDeathThisTick(allData.ants.sugarCumulativeDebt))
                       allData
-                        .addMessage("An ant died of starvation")
+                        .addMessage("An ant died of starvation.")
                         .modify(_.ants.workers)
                         .using(_ - 1 * u)
                         .modify(_.ants)
