@@ -11,6 +11,9 @@ import scala.scalajs.js.timers.setInterval
 
 object Utils {
 
+  var pause: Boolean = false
+  val unlocksOwner: SubscriptionManager = new SubscriptionManager
+
   val worldData: Var[WorldData] = Var(WorldData.initial(System.currentTimeMillis()))
   val queensData: Var[QueenData] = Var(QueenData.initial)
   val antsData: Var[AntsData] = Var(AntsData.initial)
@@ -85,7 +88,7 @@ object Utils {
     initializeTicksUpdater(owner)
     initializeActionUpdater(owner)
     setInterval(200)(updateState())
-    UnlockUtils.checkUnlocks(owner)
+    UnlockUtils.checkUnlocks(unlocksOwner)
     addMessage("We should collect some sugar to feed our queen.")
 
   }
@@ -94,7 +97,8 @@ object Utils {
     actionUpdater.writer.onNext(_.addMessage(message))
 
   private def updateState(): Unit =
-    updateBus.writer.onNext(())
+    if (!pause)
+      updateBus.writer.onNext(())
 
   private def initializeTicksUpdater(owner: Owner): Unit = {
     updateBus.events
@@ -206,6 +210,20 @@ object Utils {
       }(owner)
 
     eventBus.writer.onNext(())
+  }
+
+  class SubscriptionManager extends Owner {
+    private var killableSubscriptions: List[Subscription] = List()
+
+    def track(subscription: Subscription): Unit = {
+      killableSubscriptions = subscription :: killableSubscriptions
+    }
+
+    def killAll(): Unit = {
+      killableSubscriptions.foreach(subscription => if (!subscription.isKilled) subscription.kill())
+      killableSubscriptions = List()
+    }
+
   }
 
 }

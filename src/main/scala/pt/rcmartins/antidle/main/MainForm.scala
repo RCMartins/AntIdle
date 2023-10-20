@@ -9,7 +9,7 @@ import org.scalajs.dom.{window, HTMLDivElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
-import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad}
+import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad, UnlockUtils, Utils}
 import pt.rcmartins.antidle.model._
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -206,7 +206,13 @@ object MainForm {
           onClick --> { _ =>
             SaveLoad
               .loadFromLocalStorage()
-              .foreach(loadedAllData => actionUpdater.writer.onNext(_ => loadedAllData))
+              .foreach { loadedAllData =>
+                Utils.pause = true
+                unlocksOwner.killAll()
+                actionUpdater.writer.onNext(_ => loadedAllData)
+                actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
+                Utils.pause = false
+              }
           }
         ),
       )

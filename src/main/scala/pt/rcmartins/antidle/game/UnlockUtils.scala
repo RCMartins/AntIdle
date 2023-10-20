@@ -7,10 +7,11 @@ import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, Unlocks, UpgradesData}
 
+import scala.util.chaining.scalaUtilChainingOps
+
 object UnlockUtils {
 
-  // TODO this does not work properly when the game is loaded from a save
-  def checkUnlocks(owner: Owner): Unit = {
+  def checkUnlocks(owner: SubscriptionManager): Unit = {
     unlockSubscription[Long](
       sugarSignal,
       _ >= 5 * u,
@@ -91,16 +92,19 @@ object UnlockUtils {
       valueSignal: Signal[A],
       triggerThreshold: A => Boolean,
       unlock: Long => Unit,
-  )(owner: Owner): Unit = {
-    var subscription: Subscription = null
-    subscription = valueSignal
-      .withCurrentValueOf(currentTickSignal)
-      .foreach { case (value, currentTick) =>
-        if (triggerThreshold(value)) {
-          unlock(currentTick)
-          subscription.kill()
-        }
-      }(owner)
+  )(owner: SubscriptionManager): Unit = {
+    var subscription: Option[Subscription] = None
+    subscription = Some(
+      valueSignal
+        .withCurrentValueOf(currentTickSignal)
+        .foreach { case (value, currentTick) =>
+          if (triggerThreshold(value)) {
+            unlock(currentTick)
+            subscription.foreach(_.kill())
+          }
+        }(owner)
+        .tap(owner.track)
+    )
   }
 
 }
