@@ -4,9 +4,21 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.Utils._
-import pt.rcmartins.antidle.model.{ActionCost, AntBrood, AntTask, BuildTask}
+import pt.rcmartins.antidle.model.Chamber.ChamberType
+import pt.rcmartins.antidle.model._
+
+import scala.util.Random
 
 object Actions {
+
+  def antDeathThisTick(seed: Long, sugarCumulativeDebt: Long): Boolean =
+    if (sugarCumulativeDebt < AntDeathRiskThreshold) false
+    else if (sugarCumulativeDebt >= AntDeathRiskThreshold * (MaxExponent - 1)) true
+    else {
+      val exponent = (sugarCumulativeDebt / AntDeathRiskThreshold).toInt
+      val chance = exponent0_95(exponent)
+      new Random(seed).nextDouble() > chance
+    }
 
   def reduceAntTask(antTask: AntTask): Unit =
     actionUpdater.writer.onNext { allData =>
@@ -49,21 +61,6 @@ object Actions {
         .setTo(true)
     }
 
-  val nestUpgradeCost: Signal[ActionCost] =
-    nestSignal
-      .map(_.nestLevel)
-      .distinct
-      .map(level =>
-        ActionCost(buildPower = (NestUpgradeBaseCost * NestUpgradeMultiplier(level)).floor.toLong)
-      )
-
-  val nestUpgradeEnabled: Signal[Boolean] =
-    buildQueueSignal
-      .combineWith(maxBuildQueueSignal)
-      .map { case (buildQueue, maxBuildQueue) =>
-        buildQueue.size < maxBuildQueue
-      }
-
   def addBuildTask(buildTask: BuildTask): Unit =
     actionUpdater.writer.onNext { allData =>
       allData
@@ -71,37 +68,65 @@ object Actions {
         .using(_ :+ buildTask)
     }
 
-  def unlockQueenChamberUpgrade(actionCost: ActionCost): Unit =
+  def unlockUpgrade(actionCost: ActionCost, unlockAction: UpgradesData => UpgradesData): Unit =
     actionUpdater.writer.onNext { allData =>
       allData
         .modify(_.basicResources)
         .using(_.spendResources(actionCost))
-        .modify(_.upgrades.queensChamber.unlocked)
-        .setTo(true)
-        .modify(_.unlocks.actions.canBuildQueenChamber)
-        .setTo(true)
+        .modify(_.upgrades)
+        .using(unlockAction)
     }
 
-  def unlockImproveSugarCollectorTask(actionCost: ActionCost): Unit =
-    actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.basicResources)
-        .using(_.spendResources(actionCost))
-        .modify(_.upgrades.improveSugarCollectorTask.unlocked)
-        .setTo(true)
-    }
-
-  val queenChamberCost: Signal[ActionCost] =
-    chambersSignal
-      .map(_.queenChamber.level)
-      .distinct
-      .map(level => ActionCost(buildPower = (25 * u * exponent1_25(level)).floor.toLong))
-
-  val queenChamberBuyEnabled: Signal[Boolean] =
+  val buildChamberBuyEnabled: Signal[Boolean] =
     buildQueueSignal
       .combineWith(maxBuildQueueSignal)
       .map { case (buildQueue, maxBuildQueue) =>
         buildQueue.size < maxBuildQueue
       }
+
+  def getChamber(chamberType: ChamberType): Signal[Chamber] =
+    chambersSignal.map { chambers =>
+      chamberType match {
+        case ChamberType.Nest        => chambers.nestChamber
+        case ChamberType.Queen       => chambers.queenChamber
+        case ChamberType.FoodStorage => chambers.foodStorageChamber
+        case ChamberType.Nursery     => chambers.nurseryChamber
+      }
+    }
+
+  def getBuildTask(chamberType: ChamberType, buildPower: Long): BuildTask =
+    chamberType match {
+      case ChamberType.Nest        => BuildTask.NestUpgrade(buildPower)
+      case ChamberType.Queen       => BuildTask.QueenChamber(buildPower)
+      case ChamberType.FoodStorage => BuildTask.FoodStorageChamber(buildPower)
+      case ChamberType.Nursery     => BuildTask.NurseryChamber(buildPower)
+    }
+
+  def getActionBonus(chamberType: ChamberType): Signal[ActionBonus] =
+    Val(
+      chamberType match {
+        case ChamberType.Nest =>
+          ActionBonus(
+            colonyPointsEachWorker = Constants.defaultNestLevelColonyPointsSecond,
+            maxWorkers = Constants.NestUpgradeBonusMaxWorkers,
+          )
+        case ChamberType.Queen =>
+          ActionBonus(
+            maxEggs = Constants.QueenChamberBonusMaxEggs,
+          )
+        case ChamberType.FoodStorage =>
+          ActionBonus(
+            maxSugar = Constants.FoodStorageChamberBonusMaxSugar,
+          )
+        case ChamberType.Nursery =>
+          ActionBonus()
+      }
+    )
+
+  def buildChamberCost(chamberType: ChamberType): Signal[ActionCost] =
+    getChamber(chamberType)
+      .map(_.level)
+      .distinct
+      .map(level => ActionCost(buildPower = getChamberBuildPower(chamberType, level)))
 
 }

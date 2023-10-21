@@ -4,10 +4,10 @@ import pt.rcmartins.antidle.model.Unlocks._
 import zio.json._
 
 case class Unlocks(
-    actions: ActionUnlocks,
-    tabs: TabUnlocks,
-    resources: ResourceUnlocks,
-    general: GeneralUnlocks,
+    actions: ActionUnlocks = ActionUnlocks(),
+    tabs: TabUnlocks = TabUnlocks(),
+    resources: ResourceUnlocks = ResourceUnlocks(),
+    general: GeneralUnlocks = GeneralUnlocks(),
 )
 
 object Unlocks {
@@ -15,18 +15,11 @@ object Unlocks {
   implicit val decoder: JsonDecoder[Unlocks] = DeriveJsonDecoder.gen[Unlocks]
   implicit val encoder: JsonEncoder[Unlocks] = DeriveJsonEncoder.gen[Unlocks]
 
-  val initial: Unlocks =
-    Unlocks(
-      actions = ActionUnlocks(),
-      tabs = TabUnlocks(),
-      resources = ResourceUnlocks(),
-      general = GeneralUnlocks(),
-    )
-
   case class ActionUnlocks(
       canLayEggs: Boolean = false,
       canBuildNestUpgrade: Boolean = false,
       canBuildQueenChamber: Boolean = false,
+      canBuildFoodStorageChamber: Boolean = false,
   )
 
   object ActionUnlocks {

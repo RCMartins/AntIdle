@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.game
 
+import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.WorldData._
 
 import scala.util.Random
@@ -8,8 +9,9 @@ object Constants {
 
   @inline final val u: Long = 10000L
 
-  private val MaxExponent = 100
+  val MaxExponent = 100
   val exponent0_95: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(0.95, _))
+  val exponent1_14: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.14, _))
   val exponent1_25: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.25, _))
   val exponent1_75: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.75, _))
 
@@ -25,16 +27,14 @@ object Constants {
     tickAndSeconds((1.0 * u).toLong)
 
   val (defaultNestLevelColonyPointsTick: Long, defaultNestLevelColonyPointsSecond: Long) =
-    tickAndSeconds((0.02 * u).toLong)
+    tickAndSeconds((0.01 * u).toLong)
 
   val (antsSugarUpkeepTick: Long, antsSugarUpkeepSecond: Long) =
     tickAndSeconds((0.2 * u).toLong)
 
-  val NestUpgradeBaseCost: Long = 20 * u
-  val NestUpgradeMultiplier: IndexedSeq[Double] = exponent1_75
   val NestUpgradeBonusMaxWorkers: Long = 5 * u
-
   val QueenChamberBonusMaxEggs: Long = 2 * u
+  val FoodStorageChamberBonusMaxSugar: Long = 1000 * u
 
   val AntDeathRiskThreshold: Long = 10 * u
 
@@ -42,15 +42,19 @@ object Constants {
     (perSecondValue / TicksPerSecond, perSecondValue)
 
   val NestUpgradeName = "Expand Nest"
-  val QueenChamberName = "Queen Chamber"
+  val QueenChamberName = "Queen's Chamber"
+  val StorageChamberName = "Food Storage Chamber"
 
-  def antDeathThisTick(seed: Long, sugarCumulativeDebt: Long): Boolean =
-    if (sugarCumulativeDebt < AntDeathRiskThreshold) false
-    else if (sugarCumulativeDebt >= AntDeathRiskThreshold * (MaxExponent - 1)) true
-    else {
-      val exponent = (sugarCumulativeDebt / AntDeathRiskThreshold).toInt
-      val chance = exponent0_95(exponent)
-      new Random(seed).nextDouble() > chance
+  def getChamberBuildPower(chamberType: ChamberType, level: Int): Long = {
+    def cost(base: Long, multiplier: IndexedSeq[Double]): Long =
+      (base * multiplier(level)).toLong
+
+    chamberType match {
+      case ChamberType.Nest        => cost(20 * u, exponent1_75)
+      case ChamberType.Queen       => cost(25 * u, exponent1_25)
+      case ChamberType.FoodStorage => cost(50 * u, exponent1_14)
+      case ChamberType.Nursery     => 0 // TODO
     }
+  }
 
 }

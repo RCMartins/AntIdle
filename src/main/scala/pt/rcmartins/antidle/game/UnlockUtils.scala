@@ -22,17 +22,6 @@ object UnlockUtils {
       }
     )(owner)
 
-    // TODO build storage chamber
-//    unlockSubscription[Long](
-//      sugarSignal,
-//      _ >= 250 * u,
-//      _ => {
-//        Var.update(
-//          unlocksData -> ((_: Unlocks).copy(canBuildStorageChamber = true)),
-//        )
-//      }
-//    )(owner)
-
     unlockSubscription[Long](
       workersSignal,
       _ >= 1 * u,
@@ -80,10 +69,42 @@ object UnlockUtils {
               .setTo(true)),
           upgradesData ->
             ((_: UpgradesData)
-              .modifyAll(_.queensChamber.show, _.improveSugarCollectorTask.show)
+              .modifyAll(_.unlockQueensChamber.show, _.improveSugarCollectorTask.show)
               .setTo(true)),
         )
         addMessage("We can now upgrade our ants and our nest using colony points.")
+      }
+    )(owner)
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      _.unlockQueensChamber.unlocked,
+      _ => {
+        Var.update(
+          unlocksData -> ((_: Unlocks).modify(_.actions.canBuildQueenChamber).setTo(true)),
+        )
+      }
+    )(owner)
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      upgrades =>
+        upgrades.unlockQueensChamber.unlocked && upgrades.improveSugarCollectorTask.unlocked,
+      _ => {
+        Var.update(
+          upgradesData ->
+            ((_: UpgradesData).modify(_.unlockFoodStorageChamber.show).setTo(true)),
+        )
+      }
+    )(owner)
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      _.unlockFoodStorageChamber.unlocked,
+      _ => {
+        Var.update(
+          unlocksData -> ((_: Unlocks).modify(_.actions.canBuildFoodStorageChamber).setTo(true)),
+        )
       }
     )(owner)
   }

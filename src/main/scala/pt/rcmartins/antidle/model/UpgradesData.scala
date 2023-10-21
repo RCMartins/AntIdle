@@ -4,8 +4,10 @@ import pt.rcmartins.antidle.game.Constants.u
 import zio.json._
 
 case class UpgradesData(
-    queensChamber: UpgradeData,
+    unlockQueensChamber: UpgradeData,
     improveSugarCollectorTask: UpgradeData,
+    unlockFoodStorageChamber: UpgradeData,
+    unlockExplorerTask: UpgradeData,
 )
 
 object UpgradesData {
@@ -15,9 +17,13 @@ object UpgradesData {
 
   val initial: UpgradesData =
     UpgradesData(
-      queensChamber = UpgradeData(cost = ActionCost(colonyPoints = 50 * u)),
-      improveSugarCollectorTask =
-        UpgradeData(cost = ActionCost(sugar = 100 * u, colonyPoints = 100 * u)),
+      unlockQueensChamber = upgrade(ActionCost(colonyPoints = 50 * u)),
+      improveSugarCollectorTask = upgrade(ActionCost(sugar = 100 * u, colonyPoints = 100 * u)),
+      unlockFoodStorageChamber = upgrade(ActionCost(colonyPoints = 500 * u)),
+      unlockExplorerTask = upgrade(ActionCost(colonyPoints = 1000 * u)),
     )
+
+  @inline private def upgrade(cost: ActionCost): UpgradeData =
+    UpgradeData(cost = cost)
 
 }

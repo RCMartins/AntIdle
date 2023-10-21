@@ -41,4 +41,22 @@ object BuildTask {
 
   }
 
+  case class FoodStorageChamber(buildPowerRequired: Long) extends BuildTask {
+
+    type T = FoodStorageChamber
+
+    override def newInstance(newBuildPower: Long): T =
+      copy(buildPowerRequired = newBuildPower)
+
+  }
+
+  case class NurseryChamber(buildPowerRequired: Long) extends BuildTask {
+
+    type T = NurseryChamber
+
+    override def newInstance(newBuildPower: Long): T =
+      copy(buildPowerRequired = newBuildPower)
+
+  }
+
 }

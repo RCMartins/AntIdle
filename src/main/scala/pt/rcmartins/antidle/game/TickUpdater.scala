@@ -66,7 +66,7 @@ object TickUpdater {
                 case None => allData
                 case Some(BuildTask.NestUpgrade(_)) =>
                   allData
-                    .modify(_.nestAttributes.nestLevel)
+                    .modify(_.nestAttributes.chambers.nestChamber.level)
                     .using(_ + 1)
                     .modify(_.nestAttributes.maxWorkers)
                     .using(_ + Constants.NestUpgradeBonusMaxWorkers)
@@ -76,12 +76,22 @@ object TickUpdater {
                     .using(_ + 1)
                     .modify(_.nestAttributes.maxEggs)
                     .using(_ + Constants.QueenChamberBonusMaxEggs)
+                case Some(BuildTask.FoodStorageChamber(_)) =>
+                  allData
+                    .modify(_.nestAttributes.chambers.foodStorageChamber.level)
+                    .using(_ + 1)
+                    .modify(_.nestAttributes.maxSugar)
+                    .using(_ + Constants.FoodStorageChamberBonusMaxSugar)
+                case Some(BuildTask.NurseryChamber(_)) =>
+                  allData
+                    .modify(_.nestAttributes.chambers.nurseryChamber.level)
+                    .using(_ + 1)
               }
             }
         },
         allData => {
           allData.giveResources(
-            colonyPoints = allData.nestAttributes.nestLevel *
+            colonyPoints = allData.nestAttributes.chambers.nestChamber.level *
               allData.ants.workersLong *
               Constants.defaultNestLevelColonyPointsTick,
           )
@@ -107,7 +117,7 @@ object TickUpdater {
                   .using { sugarCumulativeDebt => sugarCumulativeDebt - sugarRemaining }
                   .pipe { allData =>
                     if (
-                      Constants.antDeathThisTick(
+                      Actions.antDeathThisTick(
                         allData.world.saveSeed + allData.world.currentTick,
                         allData.ants.sugarCumulativeDebt,
                       )

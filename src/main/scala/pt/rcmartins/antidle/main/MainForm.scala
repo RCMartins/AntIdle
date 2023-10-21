@@ -1,15 +1,19 @@
 package pt.rcmartins.antidle.main
 
 import com.raquo.airstream.ownership.OneTimeOwner
+import com.raquo.laminar.api.L
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
+import com.softwaremill.quicklens.ModifyPimp
 import org.scalajs.dom
 import org.scalajs.dom.{window, HTMLDivElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad, UnlockUtils, Utils}
+import pt.rcmartins.antidle.model.Chamber.ChamberType
+import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model._
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -371,7 +375,32 @@ object MainForm {
         )
     }
 
-  private def nestDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
+  private def nestDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+    def standardBuyChamber(
+        name: String,
+        chamberType: ChamberType,
+        unlockF: ActionUnlocks => Boolean,
+    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] =
+      ifUnlockedOpt(unlocks => unlockF(unlocks.actions)) {
+        val chamberSignal = Actions.getChamber(chamberType)
+        val actionCost = Actions.buildChamberCost(chamberType)
+        actionButton(
+          name = name,
+          chamberSignal.map(_.level).distinct.map(Some(_)),
+          Actions.buildChamberBuyEnabled,
+          Val(None),
+          actionCost,
+          Actions.getActionBonus(chamberType),
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              actionCost,
+              actionCost =>
+                Actions.addBuildTask(Actions.getBuildTask(chamberType, actionCost.buildPower))
+            ),
+        )
+      }
+
     div(
       className := "row",
       actionButton(
@@ -394,48 +423,23 @@ object MainForm {
           () => Actions.layEggAction(),
         )
       },
-      child.maybe <-- ifUnlockedOpt(_.actions.canBuildNestUpgrade) {
-        actionButton(
-          name = Constants.NestUpgradeName,
-          nestSignal.map(_.nestLevel).distinct.map(Some(_)),
-          Actions.nestUpgradeEnabled,
-          Val(None),
-          Actions.nestUpgradeCost,
-          Val(
-            ActionBonus(
-              colonyPointsEachWorker = Constants.defaultNestLevelColonyPointsSecond,
-              maxWorkers = Constants.NestUpgradeBonusMaxWorkers,
-            )
-          ),
-          () =>
-            useSignalValue[ActionCost](
-              owner,
-              Actions.nestUpgradeCost,
-              actionCost => Actions.addBuildTask(BuildTask.NestUpgrade(actionCost.buildPower))
-            ),
-        )
-      },
-      child.maybe <-- ifUnlockedOpt(_.actions.canBuildQueenChamber) {
-        actionButton(
-          name = Constants.QueenChamberName,
-          nestSignal.map(_.chambers.queenChamber.level).map(Some(_)),
-          Actions.queenChamberBuyEnabled,
-          Val(None),
-          Actions.queenChamberCost,
-          Val(
-            ActionBonus(
-              maxEggs = Constants.QueenChamberBonusMaxEggs,
-            )
-          ),
-          () =>
-            useSignalValue[ActionCost](
-              owner,
-              Actions.queenChamberCost,
-              actionCost => Actions.addBuildTask(BuildTask.QueenChamber(actionCost.buildPower))
-            ),
-        )
-      },
+      child.maybe <-- standardBuyChamber(
+        name = Constants.NestUpgradeName,
+        chamberType = ChamberType.Nest,
+        unlockF = _.canBuildNestUpgrade,
+      ),
+      child.maybe <-- standardBuyChamber(
+        name = Constants.QueenChamberName,
+        chamberType = ChamberType.Queen,
+        unlockF = _.canBuildQueenChamber,
+      ),
+      child.maybe <-- standardBuyChamber(
+        name = Constants.StorageChamberName,
+        chamberType = ChamberType.FoodStorage,
+        unlockF = _.canBuildFoodStorageChamber,
+      ),
     )
+  }
 
   private def actionButton(
       name: String,
@@ -588,8 +592,8 @@ object MainForm {
     def createUpgrade(
         name: String,
         upgradeFunc: UpgradesData => UpgradeData,
+        unlockFunc: UpgradesData => UpgradesData,
         description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
-        unlock: ActionCost => Unit,
     ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
       val costSignal: Signal[ActionCost] = upgradesSignal.map(upgradeFunc(_).cost)
       ifUpgradeReadyToBuyOpt(upgradeFunc) {
@@ -604,7 +608,7 @@ object MainForm {
             useSignalValue[ActionCost](
               owner,
               costSignal,
-              actionCost => unlock(actionCost)
+              actionCost => Actions.unlockUpgrade(actionCost, unlockFunc),
             ),
         )
       }
@@ -613,16 +617,23 @@ object MainForm {
     div(
       className := "row",
       child.maybe <-- createUpgrade(
-        name = "Unlock Queen chamber",
-        _.queensChamber,
-        description = Val(Some(div("Improves the queen's chamber abilities."))),
-        unlock = Actions.unlockQueenChamberUpgrade,
+        name = "Unlock Queen's Chamber",
+        _.unlockQueensChamber,
+        _.modify(_.unlockQueensChamber.unlocked).setTo(true),
+        description =
+          Val(Some(div("Unlock the ability to improves the queen's chamber abilities."))),
       ),
       child.maybe <-- createUpgrade(
         name = "Foraging Techniques",
         _.improveSugarCollectorTask,
+        _.modify(_.improveSugarCollectorTask.unlocked).setTo(true),
         description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
-        unlock = Actions.unlockImproveSugarCollectorTask,
+      ),
+      child.maybe <-- createUpgrade(
+        name = "Unlock Food Storage Chamber",
+        _.unlockFoodStorageChamber,
+        _.modify(_.unlockFoodStorageChamber.unlocked).setTo(true),
+        description = Val(Some(div("Unlock the ability to improves the food storage capacity."))),
       ),
     )
   }

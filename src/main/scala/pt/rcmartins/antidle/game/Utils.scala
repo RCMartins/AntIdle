@@ -23,7 +23,7 @@ object Utils {
   val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
   val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
   val chambersSignal: Signal[AllChamberData] = nestSignal.map(_.chambers).distinct
-  val unlocksData: Var[Unlocks] = Var(Unlocks.initial)
+  val unlocksData: Var[Unlocks] = Var(Unlocks())
   val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
   val upgradesData: Var[UpgradesData] = Var(UpgradesData.initial)
   val upgradesSignal: Signal[UpgradesData] = upgradesData.signal.distinct
