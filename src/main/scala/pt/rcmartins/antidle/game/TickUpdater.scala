@@ -106,7 +106,12 @@ object TickUpdater {
                   .modify(_.ants.sugarCumulativeDebt)
                   .using { sugarCumulativeDebt => sugarCumulativeDebt - sugarRemaining }
                   .pipe { allData =>
-                    if (Constants.antDeathThisTick(allData.ants.sugarCumulativeDebt))
+                    if (
+                      Constants.antDeathThisTick(
+                        allData.world.saveSeed + allData.world.currentTick,
+                        allData.ants.sugarCumulativeDebt,
+                      )
+                    )
                       allData
                         .addMessage("An ant died of starvation.")
                         .modify(_.ants.workers)

@@ -3,7 +3,10 @@ package pt.rcmartins.antidle.model
 import pt.rcmartins.antidle.model.WorldData._
 import zio.json._
 
+import scala.util.Random
+
 case class WorldData(
+    saveSeed: Long,
     currentTick: Long,
     targetTick: Long,
     lastUpdateTime: Long,
@@ -27,6 +30,7 @@ object WorldData {
 
   def initial(currentTime: Long): WorldData =
     WorldData(
+      saveSeed = Random.nextLong(),
       currentTick = 0,
       targetTick = 0,
       lastUpdateTime = currentTime,

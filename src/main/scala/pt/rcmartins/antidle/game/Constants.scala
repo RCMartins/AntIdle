@@ -2,6 +2,8 @@ package pt.rcmartins.antidle.game
 
 import pt.rcmartins.antidle.model.WorldData._
 
+import scala.util.Random
+
 object Constants {
 
   @inline final val u: Long = 10000L
@@ -42,13 +44,13 @@ object Constants {
   val NestUpgradeName = "Expand Nest"
   val QueenChamberName = "Queen Chamber"
 
-  def antDeathThisTick(sugarCumulativeDebt: Long): Boolean =
+  def antDeathThisTick(seed: Long, sugarCumulativeDebt: Long): Boolean =
     if (sugarCumulativeDebt < AntDeathRiskThreshold) false
     else if (sugarCumulativeDebt >= AntDeathRiskThreshold * (MaxExponent - 1)) true
     else {
       val exponent = (sugarCumulativeDebt / AntDeathRiskThreshold).toInt
       val chance = exponent0_95(exponent)
-      Math.random() > chance
+      new Random(seed).nextDouble() > chance
     }
 
 }
