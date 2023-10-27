@@ -4,10 +4,10 @@ import pt.rcmartins.antidle.game.Constants.u
 import zio.json._
 
 case class AntsData(
-    eggsAndLarvae: Seq[AntBrood],
-    workers: Long,
-    tasks: Seq[(AntTask, Long)],
-    sugarCumulativeDebt: Long,
+    eggsAndLarvae: Seq[AntBrood] = Seq.empty,
+    workers: Long = 0,
+    tasks: Seq[(AntTask, Long)] = Seq.empty,
+    sugarCumulativeDebt: Long = 0,
 ) {
 
   val idleWorkersCount: Long =
@@ -36,13 +36,5 @@ object AntsData {
 
   implicit val decoder: JsonDecoder[AntsData] = DeriveJsonDecoder.gen[AntsData]
   implicit val encoder: JsonEncoder[AntsData] = DeriveJsonEncoder.gen[AntsData]
-
-  val initial: AntsData =
-    AntsData(
-      eggsAndLarvae = Seq.empty,
-      workers = 0,
-      tasks = Seq.empty,
-      sugarCumulativeDebt = 0,
-    )
 
 }

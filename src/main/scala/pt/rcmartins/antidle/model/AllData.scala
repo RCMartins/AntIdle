@@ -9,7 +9,6 @@ import zio.json._
 case class AllData(
     version: Int = AllData.CurrentVersion,
     world: WorldData,
-    queens: QueenData,
     ants: AntsData,
     basicResources: BasicResources,
     nestAttributes: NestAttributes,
@@ -28,7 +27,6 @@ case class AllData(
   def updateVars(): Unit =
     Var.set(
       worldData -> world,
-      queensData -> queens,
       antsData -> ants,
       basicResourcesData -> basicResources,
       nestAttributesData -> nestAttributes,
@@ -53,7 +51,6 @@ object AllData {
 
   def simple(
       world: WorldData,
-      queen: QueenData,
       ants: AntsData,
       basic: BasicResources,
       next: NestAttributes,
@@ -64,7 +61,6 @@ object AllData {
     AllData(
       version = CurrentVersion,
       world = world,
-      queens = queen,
       ants = ants,
       basicResources = basic,
       nestAttributes = next,

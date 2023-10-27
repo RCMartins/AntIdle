@@ -3,6 +3,7 @@ package pt.rcmartins.antidle.model
 import pt.rcmartins.antidle.game.Constants.u
 import zio.json._
 
+// TODO place cost elsewhere?
 case class UpgradesData(
     unlockQueensChamber: UpgradeData,
     improveSugarCollectorTask: UpgradeData,

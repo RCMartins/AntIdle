@@ -239,8 +239,10 @@ object MainForm {
     def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] = {
       val name: String =
         buildTask match {
-          case _: BuildTask.NestUpgrade  => Constants.NestUpgradeName
-          case _: BuildTask.QueenChamber => Constants.QueenChamberName
+          case _: BuildTask.NestUpgrade        => Constants.NestUpgradeName
+          case _: BuildTask.QueenChamber       => Constants.QueenChamberName
+          case _: BuildTask.FoodStorageChamber => Constants.StorageChamberName
+          case _: BuildTask.NurseryChamber     => Constants.NurseryChamberName
         }
       span(name, " [", prettyNumber1d(buildTask.buildPowerRequired), "]")
     }

@@ -7,7 +7,7 @@ case class AllChamberData(
     nestChamber: NestChamber = NestChamber(0),
     queenChamber: QueenChamber = QueenChamber(1),
     foodStorageChamber: FoodStorageChamber = FoodStorageChamber(1),
-    nurseryChamber: NurseryChamber = NurseryChamber(1),
+    nurseryChamber: NurseryChamber = NurseryChamber(0),
 )
 
 object AllChamberData {

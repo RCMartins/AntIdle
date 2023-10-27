@@ -4,33 +4,20 @@ import pt.rcmartins.antidle.game.Constants._
 import zio.json._
 
 case class NestAttributes(
-    chambers: AllChamberData,
-    buildQueue: Seq[BuildTask],
-    dirt: Long,
-    deadAnts: Long,
-    detritus: Long,
-    maxSugar: Long,
-    maxEggs: Long,
-    maxWorkers: Long,
-    maxBuildQueue: Int,
+    chambers: AllChamberData = AllChamberData(),
+    buildQueue: Seq[BuildTask] = Seq.empty,
+    dirt: Long = 0,
+    deadAnts: Long = 0,
+    detritus: Long = 0,
+    maxSugar: Long = 1000 * u,
+    maxEggs: Long = QueenChamberBonusMaxEggs,
+    maxWorkers: Long = NestUpgradeBonusMaxWorkers,
+    maxBuildQueue: Int = 1,
 )
 
 object NestAttributes {
 
   implicit val decoder: JsonDecoder[NestAttributes] = DeriveJsonDecoder.gen[NestAttributes]
   implicit val encoder: JsonEncoder[NestAttributes] = DeriveJsonEncoder.gen[NestAttributes]
-
-  val initial: NestAttributes =
-    NestAttributes(
-      chambers = AllChamberData(),
-      buildQueue = Seq.empty,
-      dirt = 0,
-      deadAnts = 0,
-      detritus = 0,
-      maxSugar = 1000 * u,
-      maxEggs = QueenChamberBonusMaxEggs,
-      maxWorkers = NestUpgradeBonusMaxWorkers,
-      maxBuildQueue = 1,
-    )
 
 }

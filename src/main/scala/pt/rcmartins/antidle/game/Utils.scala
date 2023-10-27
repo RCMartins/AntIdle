@@ -15,12 +15,11 @@ object Utils {
   val unlocksOwner: SubscriptionManager = new SubscriptionManager
 
   val worldData: Var[WorldData] = Var(WorldData.initial(System.currentTimeMillis()))
-  val queensData: Var[QueenData] = Var(QueenData.initial)
-  val antsData: Var[AntsData] = Var(AntsData.initial)
+  val antsData: Var[AntsData] = Var(AntsData())
   val antsSignal: Signal[AntsData] = antsData.signal
-  val basicResourcesData: Var[BasicResources] = Var(BasicResources.initial)
+  val basicResourcesData: Var[BasicResources] = Var(BasicResources())
   val resourcesSignal: Signal[BasicResources] = basicResourcesData.signal
-  val nestAttributesData: Var[NestAttributes] = Var(NestAttributes.initial)
+  val nestAttributesData: Var[NestAttributes] = Var(NestAttributes())
   val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
   val chambersSignal: Signal[AllChamberData] = nestSignal.map(_.chambers).distinct
   val unlocksData: Var[Unlocks] = Var(Unlocks())
@@ -116,7 +115,6 @@ object Utils {
     ticksBus.events
       .sample(
         worldData,
-        queensData,
         antsData,
         resourcesSignal,
         nestAttributesData,
@@ -124,10 +122,10 @@ object Utils {
         upgradesData,
         messagesSeq,
       )
-      .foreach { case (world, queen, ants, basic, next, unlocks, upgrades, messages) =>
+      .foreach { case (world, ants, basic, next, unlocks, upgrades, messages) =>
         val ticksToUpdate = world.targetTick - world.currentTick
         if (ticksToUpdate > 0) {
-          val allData = AllData.simple(world, queen, ants, basic, next, unlocks, upgrades, messages)
+          val allData = AllData.simple(world, ants, basic, next, unlocks, upgrades, messages)
 
           @tailrec
           def loop(ticksLeft: Long, allData: AllData): AllData =
@@ -145,7 +143,6 @@ object Utils {
     actionUpdater.events
       .withCurrentValueOf(
         worldData,
-        queensData,
         antsData,
         resourcesSignal,
         nestAttributesData,
@@ -153,8 +150,8 @@ object Utils {
         upgradesData,
         messagesSeq,
       )
-      .foreach { case (actionFunc, world, queen, ants, basic, next, unlocks, upgrades, messages) =>
-        val allData = AllData.simple(world, queen, ants, basic, next, unlocks, upgrades, messages)
+      .foreach { case (actionFunc, world, ants, basic, next, unlocks, upgrades, messages) =>
+        val allData = AllData.simple(world, ants, basic, next, unlocks, upgrades, messages)
         actionFunc(allData).updateVars()
       }(owner)
 

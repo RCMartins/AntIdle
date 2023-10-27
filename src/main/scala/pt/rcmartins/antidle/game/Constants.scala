@@ -44,6 +44,7 @@ object Constants {
   val NestUpgradeName = "Expand Nest"
   val QueenChamberName = "Queen's Chamber"
   val StorageChamberName = "Food Storage Chamber"
+  val NurseryChamberName = "Nursery Chamber"
 
   def getChamberBuildPower(chamberType: ChamberType, level: Int): Long = {
     def cost(base: Long, multiplier: IndexedSeq[Double]): Long =
