@@ -71,8 +71,7 @@ object Actions {
   def unlockUpgrade(actionCost: ActionCost, unlockAction: UpgradesData => UpgradesData): Unit =
     actionUpdater.writer.onNext { allData =>
       allData
-        .modify(_.basicResources)
-        .using(_.spendResources(actionCost))
+        .spendResources(actionCost)
         .modify(_.upgrades)
         .using(unlockAction)
     }
@@ -128,5 +127,12 @@ object Actions {
       .map(_.level)
       .distinct
       .map(level => ActionCost(buildPower = getChamberBuildPower(chamberType, level)))
+
+  def explore(actionCost: ActionCost): Unit =
+    actionUpdater.writer.onNext { allData =>
+      allData
+        .spendResources(actionCost)
+
+    }
 
 }

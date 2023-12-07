@@ -30,6 +30,14 @@ case class AntsData(
         copy(tasks = tasks.updated(index, (task, newCount)))
     }
 
+  def hasIdleWorkersForCost(cost: ActionCost): Boolean =
+    idleWorkersCount >= cost.explorerWorkers
+
+  def spendResources(actionCost: ActionCost): AntsData =
+    copy(
+      workers = workers - actionCost.explorerWorkers,
+    )
+
 }
 
 object AntsData {

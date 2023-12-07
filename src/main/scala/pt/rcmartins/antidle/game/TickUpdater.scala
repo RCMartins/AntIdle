@@ -127,14 +127,18 @@ object TickUpdater {
                     )
                       allData
                         .addMessage("An ant died of starvation.")
-                        .modify(_.ants.workers)
-                        .using(_ - 1 * u)
                         .modify(_.ants)
                         .using { antsData =>
-                          if (antsData.idleWorkersCount < 0)
-                            antsData.remove1WorkerFromLastTask
-                          else
-                            antsData
+                          (
+                            if (antsData.idleWorkersCount < 0)
+                              antsData.remove1WorkerFromLastTask
+                            else
+                              antsData
+                          )
+                            .modify(_.workers)
+                            .using(_ - 1 * u)
+                            .modify(_.sugarCumulativeDebt)
+                            .using(debt => Math.max(0, debt - Constants.AntDeathRiskThreshold))
                         }
                     else
                       allData

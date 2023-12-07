@@ -77,6 +77,9 @@ object Utils {
   val upgradesTabUnlockedSignal: Signal[Boolean] =
     unlocksSignal.map(_.tabs.upgradesTabUnlocked).distinct
 
+  val exploreTabUnlockedSignal: Signal[Boolean] =
+    unlocksSignal.map(_.tabs.exploreTabUnlocked).distinct
+
   val updateBus: EventBus[Unit] = new EventBus()
   val ticksBus: EventBus[Unit] = new EventBus()
   val actionUpdater: EventBus[AllData => AllData] = new EventBus()
@@ -183,8 +186,8 @@ object Utils {
       }
 
   def hasResourcesSignal(costSignal: Signal[ActionCost]): Signal[Boolean] =
-    resourcesSignal.combineWith(costSignal).map { case (resources, cost) =>
-      resources.hasResources(cost)
+    resourcesSignal.combineWith(antsSignal, costSignal).map { case (resources, ants, cost) =>
+      resources.hasResources(cost) && ants.hasIdleWorkersForCost(cost)
     }
 
   def ifGreater0[A](compareValue: Long)(func: Long => A): Option[A] =

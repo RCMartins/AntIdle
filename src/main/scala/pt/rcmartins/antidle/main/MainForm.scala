@@ -165,12 +165,20 @@ object MainForm {
                 tasksDiv,
               )
             ),
-            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+            child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
               div(
                 className := "tab-pane",
                 idAttr := "upgradesContent",
                 role := "tabpanel",
                 upgradesDiv(owner),
+              )
+            ),
+            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+              div(
+                className := "tab-pane",
+                idAttr := "upgradesContent",
+                role := "tabpanel",
+                exploreDiv(owner),
               )
             ),
             div(
@@ -677,6 +685,43 @@ object MainForm {
         name = "Unlock Food Storage Chamber",
         UnlockFoodStorageChamber,
         description = Val(Some(div("Unlock the ability to improves the food storage capacity."))),
+      ),
+    )
+  }
+
+  private def exploreDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+    def createExploreArea(
+        name: String,
+        unlockFunc: Signal[Boolean],
+        cost: ActionCost,
+        description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
+    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
+      val costSignal: Signal[ActionCost] = Val(cost)
+      ifUnlockedOpt(unlockFunc) {
+        actionButton(
+          name = name,
+          Val(None),
+          hasResourcesSignal(costSignal),
+          description,
+          costSignal,
+          Val(ActionBonus.empty),
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              costSignal,
+              actionCost => Actions.explore(actionCost),
+            ),
+        )
+      }
+    }
+
+    div(
+      className := "row",
+      child.maybe <-- createExploreArea(
+        name = "Explore Surroundings",
+        Val(true),
+        ActionCost(explorerWorkers = 1 * u),
+        description = Val(Some(div("Send one explorer ant out exploring the nest surroundings."))),
       ),
     )
   }
