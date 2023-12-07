@@ -9,6 +9,7 @@ case class ActionCost(
     buildPower: Long = 0L,
     colonyPoints: Long = 0L,
     DNA: Long = 0L,
+    explorerWorkers: Long = 0L,
 )
 
 object ActionCost {
