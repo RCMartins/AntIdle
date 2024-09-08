@@ -1,17 +1,16 @@
 package pt.rcmartins.antidle.main
 
 import com.raquo.airstream.ownership.OneTimeOwner
-import com.raquo.laminar.api.L
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import com.softwaremill.quicklens.ModifyPimp
 import org.scalajs.dom
-import org.scalajs.dom.{window, HTMLDivElement, HTMLSpanElement, MouseEvent}
+import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
-import pt.rcmartins.antidle.game.{Actions, Constants, SaveLoad, UnlockUtils, Utils}
+import pt.rcmartins.antidle.game._
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model._
@@ -388,7 +387,7 @@ object MainForm {
         val actionCost = Actions.buildChamberCost(chamberType)
         actionButton(
           name = name,
-          chamberSignal.map(_.level).distinct.map(Some(_)),
+          chamberSignal.map(_.level).distinct.map(Some(_).filter(_ > 0).map(span(_))),
           Actions.buildChamberBuyEnabled,
           Val(None),
           actionCost,
@@ -445,7 +444,7 @@ object MainForm {
 
   private def actionButton(
       name: String,
-      levelSignal: Signal[Option[Int]],
+      topRightBadgeSignal: Signal[Option[ReactiveHtmlElement[HTMLElement]]],
       enabledSignal: Signal[Boolean],
       descriptionSignal: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
       costSignal: Signal[ActionCost],
@@ -453,7 +452,7 @@ object MainForm {
       onClickAction: () => Unit,
   ): ReactiveHtmlElement[HTMLDivElement] =
     div(
-      className := "col-6 p-2 d-grid",
+      className := "col-6 px-3 py-2 d-grid",
       button(
         className := "btn btn-primary position-relative",
         className := "fs-4",
@@ -462,8 +461,8 @@ object MainForm {
         disabled <-- enabledSignal.map(!_),
         onClick --> { _ => onClickAction() },
         child.maybe <--
-          levelSignal.map {
-            _.filter(_ > 0).map { level =>
+          topRightBadgeSignal.map {
+            _.map { level =>
               span(
                 className := "position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary",
                 level,
@@ -597,7 +596,7 @@ object MainForm {
       ifUpgradeReadyToBuyOpt(upgradeFunc) {
         actionButton(
           name = name,
-          Val(None),
+          costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
           hasResourcesSignal(costSignal),
           description,
           costSignal,
