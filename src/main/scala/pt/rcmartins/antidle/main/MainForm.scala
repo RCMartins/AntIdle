@@ -17,6 +17,7 @@ import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model._
 
 import scala.util.chaining.scalaUtilChainingOps
+import com.raquo.laminar.shoelace.sl
 
 object MainForm {
 
