@@ -20,7 +20,7 @@ import scala.util.chaining.scalaUtilChainingOps
 
 object MainForm {
 
-  private val tooltipContent: Var[Signal[ReactiveHtmlElement[HTMLDivElement]]] = Var(Val(div()))
+  private val tooltipContent: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
   private val tooltipTarget: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
   private val tooltipVisible: Var[Boolean] = Var(false)
   private val tooltipX: Var[Int] = Var(0)
@@ -33,12 +33,12 @@ object MainForm {
       top.px <-- tooltipY.signal.distinct.map(_ - 15),
       left.px <-- tooltipX.signal.distinct.map(_ + 50),
       display <-- tooltipVisible.signal.distinct.map(if (_) "block" else "none").distinct,
-      child <-- tooltipContent.signal.flatten,
+      child <-- tooltipContent.signal,
     )
 
   private def setTooltip(
       elem: ReactiveHtmlElement[HTMLDivElement],
-      contentSignal: Signal[ReactiveHtmlElement[HTMLDivElement]]
+      contentSignal: ReactiveHtmlElement[HTMLDivElement]
   ): EventListener[MouseEvent, MouseEvent] =
     onMouseEnter --> { _ =>
       Var.set(
@@ -74,7 +74,7 @@ object MainForm {
       className := "m-2",
       className := "d-flex justify-content-start",
       className := "fs-4",
-      className.toggle("flex-column") <-- windowWidthVar.signal.map(_ < windowWidthLimit),
+      className("flex-column") <-- windowWidthVar.signal.map(_ < windowWidthLimit),
       div(
         resourcesDiv,
       ),
@@ -474,48 +474,46 @@ object MainForm {
     ).amendThis(elem =>
       setTooltip(
         elem,
-        Val(
-          div(
-            className := "p-1",
-            child.maybe <-- descriptionSignal.map {
-              _.map { descriptionDiv =>
-                div(
-                  className := "text-center",
-                  maxWidth.px := 350,
-                  descriptionDiv,
-                  hr(),
-                )
-              }
-            },
-            child <-- costSignal.map { cost =>
+        div(
+          className := "p-1",
+          child.maybe <-- descriptionSignal.map {
+            _.map { descriptionDiv =>
               div(
-                className := "d-flex flex-column justify-content-center text-center",
-                ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
-                ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
-                ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
+                className := "text-center",
+                maxWidth.px := 350,
+                descriptionDiv,
+                hr(),
               )
-            },
-            child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
-              if (cost == ActionCost.empty || bonus == ActionBonus.empty)
-                None
-              else
-                Some(hr())
-            },
-            child <-- bonusSignal.map { bonus =>
-              div(
-                className := "d-flex flex-column justify-content-center text-center",
-                ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
-                ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
-                ifGreater0(bonus.colonyPointsEachWorker)(
-                  prettyNumberSimple("+", _, " colony points/worker/s")
-                ),
-                ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
-                ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
-                ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
-              )
-            },
-          )
-        ),
+            }
+          },
+          child <-- costSignal.map { cost =>
+            div(
+              className := "d-flex flex-column justify-content-center text-center",
+              ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
+              ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
+              ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
+            )
+          },
+          child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
+            if (cost == ActionCost.empty || bonus == ActionBonus.empty)
+              None
+            else
+              Some(hr())
+          },
+          child <-- bonusSignal.map { bonus =>
+            div(
+              className := "d-flex flex-column justify-content-center text-center",
+              ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
+              ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
+              ifGreater0(bonus.colonyPointsEachWorker)(
+                prettyNumberSimple("+", _, " colony points/worker/s")
+              ),
+              ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
+              ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
+              ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
+            )
+          },
+        )
       )
     )
 
@@ -534,17 +532,15 @@ object MainForm {
       antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
     val id = s"task-${antTask.toString.toLowerCase}"
 
-    val tooltipSignal: Val[ReactiveHtmlElement[HTMLDivElement]] = antTask match {
+    val tooltipSignal: ReactiveHtmlElement[HTMLDivElement] = antTask match {
       case AntTask.SugarCollector =>
-        Val(div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant")))
+        div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
       case AntTask.WaterCollector =>
-        Val(div("???"))
+        div("???")
       case AntTask.Nursery =>
-        Val(div("???"))
+        div("???")
       case AntTask.NestBuilder =>
-        Val(
-          div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
-        )
+        div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
     }
 
     div(

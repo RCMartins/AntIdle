@@ -1,6 +1,6 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "2.13.14"
 
 lazy val root =
   (project in file("."))
@@ -10,13 +10,14 @@ lazy val root =
       scalacOptions ++= ScalacOptions.allScalacOptions,
       scalaJSUseMainModuleInitializer := true,
       libraryDependencies ++= Seq(
-        "com.raquo"                  %%% "laminar"     % "16.0.0",
-        "dev.zio"                    %%% "zio"         % "2.0.17",
-        "dev.zio"                    %%% "zio-json"    % "0.6.2",
-        "dev.zio"                    %%% "zio-prelude" % "1.0.0-RC20",
-        "com.softwaremill.quicklens" %%% "quicklens"   % "1.9.6",
+        "com.raquo"                  %%% "laminar"     % "17.1.0",
+        "dev.zio"                    %%% "zio"         % "2.1.9",
+        "dev.zio"                    %%% "zio-json"    % "0.7.3",
+        "dev.zio"                    %%% "zio-prelude" % "1.0.0-RC31",
+        "com.softwaremill.quicklens" %%% "quicklens"   % "1.9.8",
         // java.time library support for Scala.js
-        "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.5.0",
+        "io.github.cquiroz" %%% "scala-java-time"      % "2.6.0",
+        "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.6.0",
       )
     )
 
