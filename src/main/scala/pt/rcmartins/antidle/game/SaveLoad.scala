@@ -25,8 +25,13 @@ object SaveLoad {
       .flatMap(loadString)
       .filter(_.version == AllData.CurrentVersion)
 
-  def loadString(str: String): Option[AllData] =
-    loadFromJson(base64ToJson(str))
+  def loadString(str: String): Option[AllData] = {
+    val strTrimmed = str.trim
+    if (strTrimmed.startsWith("{"))
+      loadFromJson(strTrimmed)
+    else
+      loadFromJson(base64ToJson(strTrimmed))
+  }
 
   private def loadFromJson(str: String): Option[AllData] =
     str.fromJson[AllData].toOption

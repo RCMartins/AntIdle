@@ -7,6 +7,10 @@ import scala.util.Random
 
 object Constants {
 
+  // UI Constants
+
+  val ImportModalId: String = "importModal"
+
   @inline final val u: Long = 10000L
 
   val MaxExponent = 100

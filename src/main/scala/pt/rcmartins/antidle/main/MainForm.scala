@@ -5,6 +5,7 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import com.softwaremill.quicklens.ModifyPimp
+import org.querki.jquery
 import org.scalajs.dom
 import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
@@ -15,6 +16,7 @@ import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model._
 
+import scala.scalajs.js
 import scala.util.chaining.scalaUtilChainingOps
 
 object MainForm {
@@ -200,6 +202,7 @@ object MainForm {
       onMountCallback { _ =>
         windowWidthVar.set(window.innerWidth.toLong)
       },
+      Modals.importModal(),
     )
   }
 
@@ -230,6 +233,15 @@ object MainForm {
               actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
               Utils.pause = false
             }
+        }
+      ),
+      button(
+        className := "btn btn-primary col-5 m-1",
+        className := "fs-4",
+        `type` := "button",
+        "Import",
+        onClick --> { _ =>
+          jquery.$(s"#${Constants.ImportModalId}").asInstanceOf[js.Dynamic].modal("show")
         }
       )
     )
