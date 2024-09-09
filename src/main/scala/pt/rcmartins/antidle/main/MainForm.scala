@@ -12,8 +12,11 @@ import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game._
+import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model._
 
 import scala.scalajs.js
@@ -600,12 +603,13 @@ object MainForm {
   private def upgradesDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def createUpgrade(
         name: String,
-        upgradeFunc: UpgradesData => UpgradeData,
-        unlockFunc: UpgradesData => UpgradesData,
+        upgradeType: UpgradeType,
+        unlockFunc: UpgradesData => UpgradesData = identity,
         description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
     ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
-      val costSignal: Signal[ActionCost] = upgradesSignal.map(upgradeFunc(_).cost)
-      ifUpgradeReadyToBuyOpt(upgradeFunc) {
+      val costSignal: Signal[ActionCost] = Val(upgradeType.cost)
+      val upgradeSignal: Signal[UpgradeData] = upgradesSignal.map(_(upgradeType))
+      ifUpgradeReadyToBuyOpt(upgradeSignal) {
         actionButton(
           name = name,
           costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
@@ -617,7 +621,8 @@ object MainForm {
             useSignalValue[ActionCost](
               owner,
               costSignal,
-              actionCost => Actions.unlockUpgrade(actionCost, unlockFunc),
+              actionCost =>
+                Actions.unlockUpgrade(actionCost, _.unlock(upgradeType).pipe(unlockFunc)),
             ),
         )
       }
@@ -627,33 +632,28 @@ object MainForm {
       className := "row",
       child.maybe <-- createUpgrade(
         name = "Unlock Queen's Chamber",
-        _.unlockQueensChamber,
-        _.modify(_.unlockQueensChamber.unlocked).setTo(true),
+        UnlockQueensChamber,
         description =
           Val(Some(div("Unlock the ability to improves the queen's chamber abilities."))),
       ),
       child.maybe <-- createUpgrade(
         name = "Foraging Techniques 1",
-        _.improveSugarCollectorTask1,
-        _.modify(_.improveSugarCollectorTask1.unlocked).setTo(true),
+        ImproveSugarCollectorTask1,
         description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
       ),
       child.maybe <-- createUpgrade(
         name = "Foraging Techniques 2",
-        _.improveSugarCollectorTask2,
-        _.modify(_.improveSugarCollectorTask2.unlocked).setTo(true),
+        ImproveSugarCollectorTask2,
         description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
       ),
       child.maybe <-- createUpgrade(
         name = "Foraging Techniques 3",
-        _.improveSugarCollectorTask3,
-        _.modify(_.improveSugarCollectorTask3.unlocked).setTo(true),
+        ImproveSugarCollectorTask3,
         description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
       ),
       child.maybe <-- createUpgrade(
         name = "Unlock Food Storage Chamber",
-        _.unlockFoodStorageChamber,
-        _.modify(_.unlockFoodStorageChamber.unlocked).setTo(true),
+        UnlockFoodStorageChamber,
         description = Val(Some(div("Unlock the ability to improves the food storage capacity."))),
       ),
     )

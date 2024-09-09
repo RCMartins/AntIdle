@@ -2,6 +2,7 @@ package pt.rcmartins.antidle.game
 
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask}
 
 import scala.util.chaining.scalaUtilChainingOps
@@ -52,9 +53,9 @@ object TickUpdater {
             }
 
           val sugarBonusMultiplier: Double =
-            (if (allData.upgrades.improveSugarCollectorTask1.unlocked) 1.15 else 1.0) *
-              (if (allData.upgrades.improveSugarCollectorTask2.unlocked) 1.15 else 1.0) *
-              (if (allData.upgrades.improveSugarCollectorTask3.unlocked) 1.15 else 1.0)
+            (if (allData.upgrades(ImproveSugarCollectorTask1).unlocked) 1.15 else 1.0) *
+              (if (allData.upgrades(ImproveSugarCollectorTask2).unlocked) 1.15 else 1.0) *
+              (if (allData.upgrades(ImproveSugarCollectorTask3).unlocked) 1.15 else 1.0)
 
           allData
             .giveResources(

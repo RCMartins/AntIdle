@@ -172,13 +172,10 @@ object Utils {
     }
 
   def ifUpgradeReadyToBuyOpt[A](
-      upgradeFunc: UpgradesData => UpgradeData
+      upgradeSignal: Signal[UpgradeData],
   )(value: => A): Signal[Option[A]] =
-    upgradesSignal
-      .map { upgrades =>
-        val upgrade = upgradeFunc(upgrades)
-        upgrade.show && !upgrade.unlocked
-      }
+    upgradeSignal
+      .map { upgrade => upgrade.show && !upgrade.unlocked }
       .distinct
       .map {
         case false => None

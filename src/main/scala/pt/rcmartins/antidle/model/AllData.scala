@@ -42,9 +42,6 @@ case class AllData(
 
 object AllData {
 
-  implicit val decoder: JsonDecoder[AllData] = DeriveJsonDecoder.gen[AllData]
-  implicit val encoder: JsonEncoder[AllData] = DeriveJsonEncoder.gen[AllData]
-
   val CurrentVersion = 1
 
   private val MaxMessages = 10

@@ -5,7 +5,8 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.Utils._
-import pt.rcmartins.antidle.model.{AntTask, AntsData, BuildTask, Unlocks, UpgradesData}
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
+import pt.rcmartins.antidle.model._
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -68,9 +69,7 @@ object UnlockUtils {
               .modifyAll(_.resources.showColonyPoints, _.tabs.upgradesTabUnlocked)
               .setTo(true)),
           upgradesData ->
-            ((_: UpgradesData)
-              .modifyAll(_.unlockQueensChamber.show, _.improveSugarCollectorTask1.show)
-              .setTo(true)),
+            ((_: UpgradesData).show(UnlockQueensChamber, ImproveSugarCollectorTask1)),
         )
         addMessage("We can now upgrade our ants and our nest using colony points.")
       }
@@ -78,27 +77,27 @@ object UnlockUtils {
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
-      _.improveSugarCollectorTask1.unlocked,
+      _(ImproveSugarCollectorTask1).unlocked,
       _ => {
         Var.update(
-          upgradesData -> ((_: UpgradesData).modify(_.improveSugarCollectorTask2.show).setTo(true)),
+          upgradesData -> ((_: UpgradesData).show(ImproveSugarCollectorTask2)),
         )
       }
     )(owner)
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
-      _.improveSugarCollectorTask2.unlocked,
+      _(ImproveSugarCollectorTask2).unlocked,
       _ => {
         Var.update(
-          upgradesData -> ((_: UpgradesData).modify(_.improveSugarCollectorTask3.show).setTo(true)),
+          upgradesData -> ((_: UpgradesData).show(ImproveSugarCollectorTask3)),
         )
       }
     )(owner)
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
-      _.unlockQueensChamber.unlocked,
+      _(UnlockQueensChamber).unlocked,
       _ => {
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.actions.canBuildQueenChamber).setTo(true)),
@@ -109,18 +108,17 @@ object UnlockUtils {
     unlockSubscription[UpgradesData](
       upgradesSignal,
       upgrades =>
-        upgrades.unlockQueensChamber.unlocked && upgrades.improveSugarCollectorTask1.unlocked,
+        upgrades(UnlockQueensChamber).unlocked && upgrades(ImproveSugarCollectorTask1).unlocked,
       _ => {
         Var.update(
-          upgradesData ->
-            ((_: UpgradesData).modify(_.unlockFoodStorageChamber.show).setTo(true)),
+          upgradesData -> ((_: UpgradesData).show(UnlockFoodStorageChamber)),
         )
       }
     )(owner)
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
-      _.unlockFoodStorageChamber.unlocked,
+      _(UnlockFoodStorageChamber).unlocked,
       _ => {
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.actions.canBuildFoodStorageChamber).setTo(true)),

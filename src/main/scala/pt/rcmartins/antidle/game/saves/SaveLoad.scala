@@ -1,4 +1,4 @@
-package pt.rcmartins.antidle.game
+package pt.rcmartins.antidle.game.saves
 
 import org.scalajs.dom.window.localStorage
 import pt.rcmartins.antidle.model.AllData
@@ -15,7 +15,7 @@ object SaveLoad {
     jsonToBase64(saveToJson(allData))
 
   private def saveToJson(allData: AllData): String =
-    allData.toJson
+    AllDataForSave.fromAllData(allData).toJson
 
   private def jsonToBase64(str: String): String =
     java.util.Base64.getEncoder.encodeToString(str.getBytes)
@@ -34,7 +34,7 @@ object SaveLoad {
   }
 
   private def loadFromJson(str: String): Option[AllData] =
-    str.fromJson[AllData].toOption
+    str.fromJson[AllDataForSave].toOption.map(_.toAllData)
 
   private def base64ToJson(str: String): String =
     new String(java.util.Base64.getDecoder.decode(str.getBytes))

@@ -1,34 +1,87 @@
 package pt.rcmartins.antidle.model
 
 import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
+import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import zio.json._
 
-// TODO place cost elsewhere?
 case class UpgradesData(
-    unlockQueensChamber: UpgradeData,
-    improveSugarCollectorTask1: UpgradeData,
-    improveSugarCollectorTask2: UpgradeData,
-    improveSugarCollectorTask3: UpgradeData,
-    unlockFoodStorageChamber: UpgradeData,
-    unlockExplorerTask: UpgradeData,
-)
+    upgrades: Map[UpgradeType, UpgradeData],
+) {
+
+  def apply(upgradeType: UpgradeType): UpgradeData =
+    upgrades(upgradeType)
+
+  def modify(upgradeType: UpgradeType)(f: UpgradeData => UpgradeData): UpgradesData =
+    copy(upgrades = upgrades.updatedWith(upgradeType)(_.map(f)))
+
+  def unlock(upgradeTypes: UpgradeType): UpgradesData =
+    modify(upgradeTypes)(_.copy(unlocked = true))
+
+  def unlock(upgradeTypes: UpgradeType*): UpgradesData =
+    upgradeTypes.foldLeft(this)(_.unlock(_))
+
+  def show(upgradeTypes: UpgradeType): UpgradesData =
+    modify(upgradeTypes)(_.copy(show = true))
+
+  def show(upgradeTypes: UpgradeType*): UpgradesData =
+    upgradeTypes.foldLeft(this)(_.show(_))
+
+}
 
 object UpgradesData {
 
-  implicit val decoder: JsonDecoder[UpgradesData] = DeriveJsonDecoder.gen[UpgradesData]
-  implicit val encoder: JsonEncoder[UpgradesData] = DeriveJsonEncoder.gen[UpgradesData]
+  sealed trait UpgradeType {
+    def name: String
+    def cost: ActionCost
+  }
 
-  val initial: UpgradesData =
-    UpgradesData(
-      unlockQueensChamber = upgrade(ActionCost(colonyPoints = 50 * u)),
-      improveSugarCollectorTask1 = upgrade(ActionCost(sugar = 100 * u, colonyPoints = 100 * u)),
-      improveSugarCollectorTask2 = upgrade(ActionCost(sugar = 500 * u, colonyPoints = 500 * u)),
-      improveSugarCollectorTask3 = upgrade(ActionCost(sugar = 2500 * u, colonyPoints = 2500 * u)),
-      unlockFoodStorageChamber = upgrade(ActionCost(colonyPoints = 500 * u)),
-      unlockExplorerTask = upgrade(ActionCost(colonyPoints = 1000 * u)),
+  object UpgradeType {
+    case object UnlockQueensChamber extends UpgradeType {
+      val name: String = "UnlockQueensChamber"
+      val cost: ActionCost = ActionCost(colonyPoints = 50 * u)
+    }
+
+    case object ImproveSugarCollectorTask1 extends UpgradeType {
+      val name: String = "ImproveSugarCollectorTask1"
+      val cost: ActionCost = ActionCost(sugar = 100 * u, colonyPoints = 100 * u)
+    }
+
+    case object ImproveSugarCollectorTask2 extends UpgradeType {
+      val name: String = "ImproveSugarCollectorTask2"
+      val cost: ActionCost = ActionCost(sugar = 500 * u, colonyPoints = 500 * u)
+    }
+
+    case object ImproveSugarCollectorTask3 extends UpgradeType {
+      val name: String = "ImproveSugarCollectorTask3"
+      val cost: ActionCost = ActionCost(sugar = 2500 * u, colonyPoints = 2500 * u)
+    }
+
+    case object UnlockFoodStorageChamber extends UpgradeType {
+      val name: String = "UnlockFoodStorageChamber"
+      val cost: ActionCost = ActionCost(colonyPoints = 500 * u)
+    }
+
+    case object UnlockExplorerTask extends UpgradeType {
+      val name: String = "UnlockExplorerTask"
+      val cost: ActionCost = ActionCost(colonyPoints = 1000 * u)
+    }
+
+    implicit val decoder: JsonDecoder[UpgradeType] = DeriveJsonDecoder.gen[UpgradeType]
+    implicit val encoder: JsonEncoder[UpgradeType] = DeriveJsonEncoder.gen[UpgradeType]
+
+    private[UpgradesData] val all: Seq[UpgradeType] = Seq(
+      UnlockQueensChamber,
+      ImproveSugarCollectorTask1,
+      ImproveSugarCollectorTask2,
+      ImproveSugarCollectorTask3,
+      UnlockFoodStorageChamber,
+      UnlockExplorerTask,
     )
 
-  @inline private def upgrade(cost: ActionCost): UpgradeData =
-    UpgradeData(cost = cost)
+  }
+
+  val initial: UpgradesData =
+    UpgradesData(UpgradeType.all.map(_ -> UpgradeData.empty).toMap)
 
 }
