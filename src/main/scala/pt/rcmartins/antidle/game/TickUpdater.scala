@@ -52,7 +52,9 @@ object TickUpdater {
             }
 
           val sugarBonusMultiplier: Double =
-            if (allData.upgrades.improveSugarCollectorTask.unlocked) 1.15 else 1.0
+            (if (allData.upgrades.improveSugarCollectorTask1.unlocked) 1.15 else 1.0) *
+              (if (allData.upgrades.improveSugarCollectorTask2.unlocked) 1.15 else 1.0) *
+              (if (allData.upgrades.improveSugarCollectorTask3.unlocked) 1.15 else 1.0)
 
           allData
             .giveResources(

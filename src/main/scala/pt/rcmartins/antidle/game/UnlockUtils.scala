@@ -69,10 +69,30 @@ object UnlockUtils {
               .setTo(true)),
           upgradesData ->
             ((_: UpgradesData)
-              .modifyAll(_.unlockQueensChamber.show, _.improveSugarCollectorTask.show)
+              .modifyAll(_.unlockQueensChamber.show, _.improveSugarCollectorTask1.show)
               .setTo(true)),
         )
         addMessage("We can now upgrade our ants and our nest using colony points.")
+      }
+    )(owner)
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      _.improveSugarCollectorTask1.unlocked,
+      _ => {
+        Var.update(
+          upgradesData -> ((_: UpgradesData).modify(_.improveSugarCollectorTask2.show).setTo(true)),
+        )
+      }
+    )(owner)
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      _.improveSugarCollectorTask2.unlocked,
+      _ => {
+        Var.update(
+          upgradesData -> ((_: UpgradesData).modify(_.improveSugarCollectorTask3.show).setTo(true)),
+        )
       }
     )(owner)
 
@@ -89,7 +109,7 @@ object UnlockUtils {
     unlockSubscription[UpgradesData](
       upgradesSignal,
       upgrades =>
-        upgrades.unlockQueensChamber.unlocked && upgrades.improveSugarCollectorTask.unlocked,
+        upgrades.unlockQueensChamber.unlocked && upgrades.improveSugarCollectorTask1.unlocked,
       _ => {
         Var.update(
           upgradesData ->

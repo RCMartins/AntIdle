@@ -85,10 +85,9 @@ object Utils {
     val owner = new OneTimeOwner(() => ())
     initializeTicksUpdater(owner)
     initializeActionUpdater(owner)
-    setInterval(200)(updateState())
     UnlockUtils.checkUnlocks(unlocksOwner)
     addMessage("We should collect some sugar to feed our queen.")
-
+    setInterval(200)(updateState())
   }
 
   def addMessage(message: String): Unit =

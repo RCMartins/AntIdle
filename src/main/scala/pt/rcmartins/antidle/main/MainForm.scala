@@ -621,9 +621,21 @@ object MainForm {
           Val(Some(div("Unlock the ability to improves the queen's chamber abilities."))),
       ),
       child.maybe <-- createUpgrade(
-        name = "Foraging Techniques",
-        _.improveSugarCollectorTask,
-        _.modify(_.improveSugarCollectorTask.unlocked).setTo(true),
+        name = "Foraging Techniques 1",
+        _.improveSugarCollectorTask1,
+        _.modify(_.improveSugarCollectorTask1.unlocked).setTo(true),
+        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
+      ),
+      child.maybe <-- createUpgrade(
+        name = "Foraging Techniques 2",
+        _.improveSugarCollectorTask2,
+        _.modify(_.improveSugarCollectorTask2.unlocked).setTo(true),
+        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
+      ),
+      child.maybe <-- createUpgrade(
+        name = "Foraging Techniques 3",
+        _.improveSugarCollectorTask3,
+        _.modify(_.improveSugarCollectorTask3.unlocked).setTo(true),
         description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
       ),
       child.maybe <-- createUpgrade(
