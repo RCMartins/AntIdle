@@ -10,6 +10,7 @@ object Constants {
   // UI Constants
 
   val ImportModalId: String = "importModal"
+  val AlertTimeout: Int = 5000
 
   @inline final val u: Long = 10000L
 

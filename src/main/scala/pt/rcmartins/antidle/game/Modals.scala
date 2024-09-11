@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.game
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom._
-import pt.rcmartins.antidle.game.UIUtils.DataBSDismissAttr
+import pt.rcmartins.antidle.game.UINumbersUtils.DataBSDismissAttr
 import pt.rcmartins.antidle.game.Utils.{actionUpdater, unlocksOwner}
 import pt.rcmartins.antidle.game.saves.SaveLoad
 

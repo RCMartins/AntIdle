@@ -4,12 +4,11 @@ import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import com.softwaremill.quicklens.ModifyPimp
 import org.querki.jquery
 import org.scalajs.dom
 import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
-import pt.rcmartins.antidle.game.UIUtils._
+import pt.rcmartins.antidle.game.UINumbersUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game._
 import pt.rcmartins.antidle.game.saves.SaveLoad
@@ -19,10 +18,13 @@ import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model._
 
+import scala.scalajs.concurrent.JSExecutionContext.queue
 import scala.scalajs.js
 import scala.util.chaining.scalaUtilChainingOps
 
 object MainForm {
+
+  val currentGlobalAlert: Var[Option[String]] = Var(None)
 
   private val tooltipContent: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
   private val tooltipTarget: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
@@ -206,6 +208,7 @@ object MainForm {
         windowWidthVar.set(window.innerWidth.toLong)
       },
       Modals.importModal(),
+      UIUtils.createShowGlobalAlertsDiv(),
     )
   }
 
@@ -218,7 +221,7 @@ object MainForm {
         `type` := "button",
         "Save",
         onClick --> { _ =>
-          actionUpdater.writer.onNext(allData => allData.tap(SaveLoad.saveToLocalStorage))
+          actionUpdater.writer.onNext(_.tap(SaveLoad.saveToLocalStorage))
         }
       ),
       button(
@@ -236,6 +239,25 @@ object MainForm {
               actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
               Utils.pause = false
             }
+        }
+      ),
+      button(
+        className := "btn btn-primary col-5 m-1",
+        className := "fs-4",
+        `type` := "button",
+        "Export",
+        onClick --> { _ =>
+          actionUpdater.writer.onNext {
+            _.tap { allData =>
+              val dataStr = SaveLoad.saveString(allData)
+              Option(dom.window.navigator.clipboard)
+                .foreach(
+                  _.writeText(dataStr).toFuture.map(_ =>
+                    currentGlobalAlert.set(Some("Exported to clipboard!"))
+                  )(queue)
+                )
+            }
+          }
         }
       ),
       button(
