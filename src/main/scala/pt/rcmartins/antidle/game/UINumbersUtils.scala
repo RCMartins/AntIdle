@@ -70,6 +70,4 @@ object UINumbersUtils {
   def prettyNumberInt(num: Long): ReactiveHtmlElement[HTMLSpanElement] =
     span((num / u).toString)
 
-  val DataBSDismissAttr: HtmlAttr[String] = htmlAttr("data-bs-dismiss", StringAsIsCodec)
-
 }

@@ -12,16 +12,15 @@ import scala.util.chaining.scalaUtilChainingOps
 
 object UnlockUtils {
 
-  def checkUnlocks(owner: SubscriptionManager): Unit = {
+  def checkUnlocks(implicit owner: SubscriptionManager): Unit = {
     unlockSubscription[Long](
       sugarSignal,
       _ >= 5 * u,
-      _ => {
+      _ =>
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.actions.canLayEggs).setTo(true)),
         )
-      }
-    )(owner)
+    )
 
     unlockSubscription[Long](
       workersSignal,
@@ -34,7 +33,7 @@ object UnlockUtils {
         )
         addMessage("We should give our ants some tasks to do. Let's start with collecting sugars.")
       }
-    )(owner)
+    )
 
     unlockSubscription[Long](
       antAndBroodCount,
@@ -45,7 +44,7 @@ object UnlockUtils {
         )
         addMessage("We should upgrade our nest to be able to hold more ants.")
       }
-    )(owner)
+    )
 
     unlockSubscription[Seq[BuildTask]](
       buildQueueSignal,
@@ -57,7 +56,7 @@ object UnlockUtils {
         )
         addMessage("Assign some of our ants as builders.")
       }
-    )(owner)
+    )
 
     unlockSubscription[Long](
       colonyPointsSignal,
@@ -73,65 +72,70 @@ object UnlockUtils {
         )
         addMessage("We can now upgrade our ants and our nest using colony points.")
       }
-    )(owner)
+    )
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
       _(ImproveSugarCollectorTask1).unlocked,
-      _ => {
+      _ =>
         Var.update(
           upgradesData -> ((_: UpgradesData).show(ImproveSugarCollectorTask2)),
         )
-      }
-    )(owner)
+    )
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
       _(ImproveSugarCollectorTask2).unlocked,
-      _ => {
+      _ =>
         Var.update(
           upgradesData -> ((_: UpgradesData).show(ImproveSugarCollectorTask3)),
         )
-      }
-    )(owner)
+    )
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
       _(UnlockQueensChamber).unlocked,
-      _ => {
+      _ =>
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.actions.canBuildQueenChamber).setTo(true)),
         )
-      }
-    )(owner)
+    )
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
       upgrades =>
         upgrades(UnlockQueensChamber).unlocked && upgrades(ImproveSugarCollectorTask1).unlocked,
-      _ => {
+      _ =>
         Var.update(
           upgradesData -> ((_: UpgradesData).show(UnlockFoodStorageChamber)),
         )
-      }
-    )(owner)
+    )
 
     unlockSubscription[UpgradesData](
       upgradesSignal,
       _(UnlockFoodStorageChamber).unlocked,
-      _ => {
+      _ =>
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.actions.canBuildFoodStorageChamber).setTo(true)),
+          upgradesData -> ((_: UpgradesData).show(UnlockExplorerTask)),
         )
-      }
-    )(owner)
+    )
+
+    unlockSubscription[UpgradesData](
+      upgradesSignal,
+      _(UnlockExplorerTask).unlocked,
+      _ =>
+        Var.update(
+          unlocksData -> ((_: Unlocks).modify(_.tabs.exploreTabUnlocked).setTo(true)),
+        )
+    )
   }
 
   private def unlockSubscription[A](
       valueSignal: Signal[A],
       triggerThreshold: A => Boolean,
       unlock: Long => Unit,
-  )(owner: SubscriptionManager): Unit = {
+  )(implicit owner: SubscriptionManager): Unit = {
     var subscription: Option[Subscription] = None
     subscription = Some(
       valueSignal
@@ -141,7 +145,7 @@ object UnlockUtils {
             unlock(currentTick)
             subscription.foreach(_.kill())
           }
-        }(owner)
+        }
         .tap(owner.track)
     )
   }

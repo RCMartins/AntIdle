@@ -24,12 +24,17 @@ case class AllData(
       .modify(_.basicResources.colonyPoints)
       .usingIf(colonyPoints > 0)(_ + colonyPoints)
 
-
-  def spendResources(actionCost: ActionCost):AllData =
+  def spendResources(actionCost: ActionCost): AllData =
     copy(
       basicResources = basicResources.spendResources(actionCost),
       ants = ants.spendResources(actionCost),
     )
+
+  def purchaseIfPossible(actionCost: ActionCost)(updateIfPossible: AllData => AllData): AllData =
+    if (basicResources.hasResources(actionCost))
+      updateIfPossible(spendResources(actionCost))
+    else
+      this
 
   def updateVars(): Unit =
     Var.set(

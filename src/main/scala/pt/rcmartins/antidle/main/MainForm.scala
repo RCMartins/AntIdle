@@ -9,13 +9,13 @@ import org.scalajs.dom
 import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UINumbersUtils._
+import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game._
 import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
-import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model._
 
 import scala.scalajs.concurrent.JSExecutionContext.queue
@@ -134,6 +134,19 @@ object MainForm {
                 )
               )
             ),
+            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+              li(
+                className := "nav-item",
+                a(
+                  className := "nav-link",
+                  idAttr := "upgrades-tab",
+                  dataAttr("bs-toggle") := "tab",
+                  href := "#exploreContent",
+                  role := "tab",
+                  "Explore",
+                )
+              )
+            ),
             li(
               className := "nav-item",
               a(
@@ -176,7 +189,7 @@ object MainForm {
             child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
               div(
                 className := "tab-pane",
-                idAttr := "upgradesContent",
+                idAttr := "exploreContent",
                 role := "tabpanel",
                 exploreDiv(owner),
               )
@@ -536,6 +549,7 @@ object MainForm {
               ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
               ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
               ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
+              ifGreater0(cost.explorerWorkers)(prettyNumberSimple("", _, " explorer workers")),
             )
           },
           child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
@@ -632,19 +646,17 @@ object MainForm {
 
   private def upgradesDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def createUpgrade(
-        name: String,
         upgradeType: UpgradeType,
         unlockFunc: UpgradesData => UpgradesData = identity,
-        description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
     ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
       val costSignal: Signal[ActionCost] = Val(upgradeType.cost)
       val upgradeSignal: Signal[UpgradeData] = upgradesSignal.map(_(upgradeType))
       ifUpgradeReadyToBuyOpt(upgradeSignal) {
         actionButton(
-          name = name,
+          name = upgradeType.name,
           costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
           hasResourcesSignal(costSignal),
-          description,
+          Val(Some(div(upgradeType.description))),
           costSignal,
           Val(ActionBonus.empty),
           () =>
@@ -660,32 +672,12 @@ object MainForm {
 
     div(
       className := "row",
-      child.maybe <-- createUpgrade(
-        name = "Unlock Queen's Chamber",
-        UnlockQueensChamber,
-        description =
-          Val(Some(div("Unlock the ability to improves the queen's chamber abilities."))),
-      ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 1",
-        ImproveSugarCollectorTask1,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
-      ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 2",
-        ImproveSugarCollectorTask2,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
-      ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 3",
-        ImproveSugarCollectorTask3,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
-      ),
-      child.maybe <-- createUpgrade(
-        name = "Unlock Food Storage Chamber",
-        UnlockFoodStorageChamber,
-        description = Val(Some(div("Unlock the ability to improves the food storage capacity."))),
-      ),
+      UpgradeType.all.map { upgradeType =>
+        div(
+          child.maybe <--
+            createUpgrade(upgradeType)
+        )
+      },
     )
   }
 
@@ -693,10 +685,9 @@ object MainForm {
     def createExploreArea(
         name: String,
         unlockFunc: Signal[Boolean],
-        cost: ActionCost,
+        costSignal: Signal[ActionCost],
         description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
-    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
-      val costSignal: Signal[ActionCost] = Val(cost)
+    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] =
       ifUnlockedOpt(unlockFunc) {
         actionButton(
           name = name,
@@ -713,15 +704,44 @@ object MainForm {
             ),
         )
       }
-    }
+
+    val amountOfExplorersVar: Var[Long] = Var(1L * u)
 
     div(
       className := "row",
+      div(
+        className := "col-12 px-3 py-2 d-grid",
+        div(
+          className := "row px-0",
+          className := "d-flex justify-content-start align-items-center",
+          div(
+            className := "col-6",
+            "Number of explorers to send:",
+            nbsp,
+            child <-- amountOfExplorersVar.signal.map(amount => b(prettyNumberInt(amount))),
+          ),
+          div(
+            className := "col-6",
+            input(
+              className := "form-range",
+              `type` := "range",
+              MinAttr := "1",
+              MaxAttr <-- maxWorkers.map(amount => (amount / u).toString),
+              value <-- amountOfExplorersVar.signal.map(amount => (amount / u).toString),
+              onInput --> { ev =>
+                val value = ev.target.asInstanceOf[HTMLInputElement].value.toLong
+                amountOfExplorersVar.set(value * u)
+                println(s"Value: $value")
+              },
+            ),
+          ),
+        ),
+      ),
       child.maybe <-- createExploreArea(
         name = "Explore Surroundings",
         Val(true),
-        ActionCost(explorerWorkers = 1 * u),
-        description = Val(Some(div("Send one explorer ant out exploring the nest surroundings."))),
+        amountOfExplorersVar.signal.map(amount => ActionCost(explorerWorkers = amount)),
+        description = Val(Some(div("Send explorer ants out exploring the nest surroundings."))),
       ),
     )
   }

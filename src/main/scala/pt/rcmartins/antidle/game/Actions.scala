@@ -129,9 +129,11 @@ object Actions {
       .map(level => ActionCost(buildPower = getChamberBuildPower(chamberType, level)))
 
   def explore(actionCost: ActionCost): Unit =
-    actionUpdater.writer.onNext { allData =>
-      allData
-        .spendResources(actionCost)
+    actionUpdater.writer.onNext {
+      _.purchaseIfPossible(actionCost) { allData =>
+        allData
+      // TODO
+      }
 
     }
 
