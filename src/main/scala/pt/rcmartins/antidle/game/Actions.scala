@@ -20,24 +20,14 @@ object Actions {
       new Random(seed).nextDouble() > chance
     }
 
-  def reduceAntTask(antTask: AntTask): Unit =
+  def reduceAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.ants.tasks)
-        .using(_.map {
-          case (task, amount) if task == antTask => (task, amount - 1L * u)
-          case other                             => other
-        })
+      allData.modify(_.ants).using(_.removeFromTask(antTask, amountU))
     }
 
-  def incrementAntTask(antTask: AntTask): Unit =
+  def incrementAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.ants.tasks)
-        .using(_.map {
-          case (task, amount) if task == antTask => (task, amount + 1L * u)
-          case other                             => other
-        })
+      allData.modify(_.ants).using(_.addToTask(antTask, amountU))
     }
 
   val layEggActionCost: Signal[ActionCost] =
@@ -132,7 +122,16 @@ object Actions {
     actionUpdater.writer.onNext {
       _.purchaseIfPossible(actionCost) { allData =>
         allData
-      // TODO
+          .modify(_.ants)
+          .using(_.addToTask(AntTask.Explorer, actionCost.idleWorkers))
+          .modify(_.exploration.explorationParties)
+          .using(
+            ExplorationParty.create(
+              actionCost.idleWorkers,
+              allData.world.currentTick,
+              Constants.ExplorationTimeTicks,
+            ) :: _
+          )
       }
 
     }

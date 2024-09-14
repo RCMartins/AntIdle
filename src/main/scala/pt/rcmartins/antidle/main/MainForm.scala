@@ -301,7 +301,7 @@ object MainForm {
           case _: BuildTask.FoodStorageChamber => Constants.StorageChamberName
           case _: BuildTask.NurseryChamber     => Constants.NurseryChamberName
         }
-      span(name, " [", prettyNumber1d(buildTask.buildPowerRequired), "]")
+      span(name, " [", prettyNumberSimple(buildTask.buildPowerRequired), "]")
     }
 
     div(
@@ -414,7 +414,7 @@ object MainForm {
             ),
             div(
               className := "col-3 text-end text-nowrap",
-              prettyNumber(value),
+              prettyNumberFixedSize(value),
             ),
             div(
               className := "col-2 text-start text-body-tertiary text-nowrap ps-0",
@@ -423,7 +423,7 @@ object MainForm {
                   if (maxValue == 0)
                     nbsp
                   else
-                    span("/", prettyNumber(maxValue))
+                    span("/", prettyNumberSimple(maxValue))
                 },
             ),
             div(
@@ -478,7 +478,7 @@ object MainForm {
           Actions.layEggActionEnabled,
           Val(Some(div("Ants require a constant sugar supply to stay alive."))),
           Actions.layEggActionCost,
-          Val(ActionBonus(eggs = 1 * u)),
+          Val(ActionBonus(eggs = 1L * u)),
           () => Actions.layEggAction(),
         )
       },
@@ -549,7 +549,7 @@ object MainForm {
               ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
               ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
               ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
-              ifGreater0(cost.explorerWorkers)(prettyNumberSimple("", _, " explorer workers")),
+              ifGreater0(cost.idleWorkers)(prettyNumberSimple("", _, " idle workers")),
             )
           },
           child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
@@ -580,26 +580,30 @@ object MainForm {
       className := "d-grid gap-2",
       span(
         "Idle Ants: ",
-        b(child <-- idleWorkersCountSignal.map(prettyNumber)),
+        b(child <-- idleWorkersCountSignal.map(prettyNumberFixedSize)),
       ),
       children <-- unlockedAntTasks.map(_.map(taskDiv)),
     )
 
   private def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
-    val amountSignal =
+    val amountSignal: Signal[Long] =
       antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
     val id = s"task-${antTask.toString.toLowerCase}"
 
-    val tooltipSignal: ReactiveHtmlElement[HTMLDivElement] = antTask match {
-      case AntTask.SugarCollector =>
-        div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
-      case AntTask.WaterCollector =>
-        div("???")
-      case AntTask.Nursery =>
-        div("???")
-      case AntTask.NestBuilder =>
-        div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
-    }
+    // TODO: Improve this, add bonuses dynamically, instead of constants
+    val tooltipSignal: ReactiveHtmlElement[HTMLDivElement] =
+      antTask match {
+        case AntTask.SugarCollector =>
+          div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
+        case AntTask.WaterCollector =>
+          div("???")
+        case AntTask.Nursery =>
+          div("???")
+        case AntTask.NestBuilder =>
+          div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
+        case AntTask.Explorer =>
+          div("Ants exploring the surroundings.")
+      }
 
     div(
       idAttr := id,
@@ -611,6 +615,7 @@ object MainForm {
           case AntTask.WaterCollector => "Water Collector"
           case AntTask.NestBuilder    => "Nest Builder"
           case AntTask.Nursery        => "Nursery"
+          case AntTask.Explorer       => "Explorer"
         },
         nbsp,
         "(",
@@ -619,25 +624,29 @@ object MainForm {
       ),
       div(
         className := "col-2",
-        button(
-          className := "btn btn-primary",
-          className := "m-1",
-          cursor.pointer,
-          i(
-            className := "fa-solid fa-minus",
+        when(antTask.showButtons)(
+          button(
+            className := "btn btn-primary",
+            className := "m-1",
+            cursor.pointer,
+            i(
+              className := "fa-solid fa-minus",
+            ),
+            disabled <-- amountSignal.map(_ == 0),
+            onClick --> { _ => Actions.reduceAntTask(antTask) }
           ),
-          disabled <-- amountSignal.map(_ == 0),
-          onClick --> { _ => Actions.reduceAntTask(antTask) }
         ),
-        button(
-          className := "btn btn-primary",
-          className := "m-1",
-          cursor.pointer,
-          i(
-            className := "fa-solid fa-plus",
+        when(antTask.showButtons)(
+          button(
+            className := "btn btn-primary",
+            className := "m-1",
+            cursor.pointer,
+            i(
+              className := "fa-solid fa-plus",
+            ),
+            disabled <-- idleWorkersCountSignal.map(_ == 0),
+            onClick --> { _ => Actions.incrementAntTask(antTask) }
           ),
-          disabled <-- idleWorkersCountSignal.map(_ == 0),
-          onClick --> { _ => Actions.incrementAntTask(antTask) }
         ),
       ),
       div(className := "col-4"),
@@ -692,7 +701,10 @@ object MainForm {
         actionButton(
           name = name,
           Val(None),
-          hasResourcesSignal(costSignal),
+          hasResourcesSignal(costSignal).combineWith(explorationSignal).map {
+            case (hasResources, exploration) =>
+              hasResources && exploration.explorationParties.sizeIs < Constants.MaxExplorationParties
+          },
           description,
           costSignal,
           Val(ActionBonus.empty),
@@ -731,7 +743,6 @@ object MainForm {
               onInput --> { ev =>
                 val value = ev.target.asInstanceOf[HTMLInputElement].value.toLong
                 amountOfExplorersVar.set(value * u)
-                println(s"Value: $value")
               },
             ),
           ),
@@ -740,9 +751,29 @@ object MainForm {
       child.maybe <-- createExploreArea(
         name = "Explore Surroundings",
         Val(true),
-        amountOfExplorersVar.signal.map(amount => ActionCost(explorerWorkers = amount)),
+        amountOfExplorersVar.signal.map(amount =>
+          ActionCost(sugar = amount * 10, idleWorkers = amount)
+        ),
         description = Val(Some(div("Send explorer ants out exploring the nest surroundings."))),
       ),
+      div(
+        className := "pt-3 px-3",
+        "Number of exploration parties: ",
+        child <-- explorationSignal.map(_.explorationParties.size),
+        " / ",
+        b(Constants.MaxExplorationParties),
+      ),
+      div(
+        className := "col-12 pt-3 d-grid",
+        children <-- explorationSignal.map {
+          _.explorationParties.map { case ExplorationParty(amountWorkers, _, targetTick) =>
+            div(
+              b(s"[${prettyNumberStr(amountWorkers)} Explorer Ant${plural(amountWorkers / u)}] "),
+              child.text <-- currentTickSignal.map(targetTick - _).map(prettyTimeFromTicks),
+            )
+          }
+        }
+      )
     )
   }
 

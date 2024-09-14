@@ -2,9 +2,8 @@ package pt.rcmartins.antidle.model
 
 import com.raquo.airstream.state.Var
 import com.softwaremill.quicklens.ModifyPimp
-import pt.rcmartins.antidle.model.AllData.MaxMessages
 import pt.rcmartins.antidle.game.Utils._
-import zio.json._
+import pt.rcmartins.antidle.model.AllData.MaxMessages
 
 case class AllData(
     version: Int = AllData.CurrentVersion,
@@ -14,10 +13,16 @@ case class AllData(
     nestAttributes: NestAttributes,
     unlocks: Unlocks,
     upgrades: UpgradesData,
+    exploration: ExplorationData,
     messages: Seq[String],
 ) {
 
-  def giveResources(sugar: Long = 0, colonyPoints: Long = 0): AllData =
+  def currentTick: Long = world.currentTick
+
+  def giveResources(
+      sugar: Long = 0,
+      colonyPoints: Long = 0,
+  ): AllData =
     this
       .modify(_.basicResources.sugar)
       .usingIf(sugar > 0)(current => Math.min(current + sugar, nestAttributes.maxSugar))
@@ -27,12 +32,11 @@ case class AllData(
   def spendResources(actionCost: ActionCost): AllData =
     copy(
       basicResources = basicResources.spendResources(actionCost),
-      ants = ants.spendResources(actionCost),
     )
 
-  def purchaseIfPossible(actionCost: ActionCost)(updateIfPossible: AllData => AllData): AllData =
-    if (basicResources.hasResources(actionCost))
-      updateIfPossible(spendResources(actionCost))
+  def purchaseIfPossible(actionCost: ActionCost)(updateIfPossibleF: AllData => AllData): AllData =
+    if (basicResources.hasResources(actionCost) && ants.hasIdleWorkersForCost(actionCost))
+      updateIfPossibleF(spendResources(actionCost))
     else
       this
 
@@ -44,6 +48,7 @@ case class AllData(
       nestAttributesData -> nestAttributes,
       unlocksData -> unlocks,
       upgradesData -> upgrades,
+      explorationData -> exploration,
       messagesSeq -> messages,
     )
 
@@ -65,6 +70,7 @@ object AllData {
       next: NestAttributes,
       unlocks: Unlocks,
       upgrades: UpgradesData,
+      exploration: ExplorationData,
       messages: Seq[String]
   ): AllData =
     AllData(
@@ -75,6 +81,7 @@ object AllData {
       nestAttributes = next,
       unlocks = unlocks,
       upgrades = upgrades,
+      exploration = exploration,
       messages = messages,
     )
 

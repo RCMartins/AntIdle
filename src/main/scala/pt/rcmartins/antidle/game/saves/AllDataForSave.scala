@@ -11,6 +11,7 @@ case class AllDataForSave(
     nestAttributes: NestAttributes,
     unlocks: Unlocks,
     upgrades: UpgradesDataForSave,
+    exploration: ExplorationData,
     messages: Seq[String],
 ) {
 
@@ -23,6 +24,7 @@ case class AllDataForSave(
       nestAttributes = nestAttributes,
       unlocks = unlocks,
       upgrades = toUpgrades,
+      exploration = exploration,
       messages = messages,
     )
 
@@ -65,6 +67,7 @@ object AllDataForSave {
           }
           .sortBy(_.name)
       ),
+      exploration = allData.exploration,
       messages = allData.messages,
     )
 

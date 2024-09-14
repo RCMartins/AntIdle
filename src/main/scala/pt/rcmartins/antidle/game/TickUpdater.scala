@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.game
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
-import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask}
+import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask, ExplorationParty}
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -14,11 +14,10 @@ object TickUpdater {
       Seq[AllData => AllData](
         allData => allData.modify(_.world.currentTick).using(_ + 1),
         allData => {
-          val currentTick = allData.world.currentTick
-
           val updatedEggsAndLarvae: Seq[Either[Unit, AntBrood]] =
             allData.ants.eggsAndLarvae.map {
-              case AntBrood.Egg(tick) if currentTick >= tick + AntBrood.defaultTicksToLarva =>
+              case AntBrood.Egg(tick)
+                  if allData.currentTick >= tick + AntBrood.defaultTicksToLarva =>
                 Left(())
               case other =>
                 Right(other)
@@ -100,6 +99,20 @@ object TickUpdater {
           )
         },
         allData => {
+          val (updatedExplorationParties, finishedParties) =
+            allData.exploration.explorationParties.partition(_.targetTick > allData.currentTick)
+
+          allData
+            .modify(_.exploration.explorationParties)
+            .setTo(updatedExplorationParties)
+            .pipe { allData =>
+              finishedParties.foldLeft(allData) { case (allData, party) =>
+                ExplorationHelper.exploreBonus(allData, party)
+              }
+            }
+        },
+        // This update should always be the last, so that all the resources are updated before the sugar upkeep
+        allData => {
           val sugarUpkeep = allData.ants.workersLong * Constants.antsSugarUpkeepTick
           val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
 
@@ -121,7 +134,7 @@ object TickUpdater {
                   .pipe { allData =>
                     if (
                       Actions.antDeathThisTick(
-                        allData.world.saveSeed + allData.world.currentTick,
+                        allData.world.saveSeed + allData.currentTick,
                         allData.ants.sugarCumulativeDebt,
                       )
                     )

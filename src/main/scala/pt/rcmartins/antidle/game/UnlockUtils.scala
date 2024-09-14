@@ -127,6 +127,7 @@ object UnlockUtils {
       _ =>
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.tabs.exploreTabUnlocked).setTo(true)),
+          antsData -> ((_: AntsData).unlockTask(AntTask.Explorer)),
         )
     )
   }

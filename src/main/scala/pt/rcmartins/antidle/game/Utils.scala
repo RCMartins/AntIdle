@@ -26,6 +26,8 @@ object Utils {
   val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
   val upgradesData: Var[UpgradesData] = Var(UpgradesData.initial)
   val upgradesSignal: Signal[UpgradesData] = upgradesData.signal.distinct
+  val explorationData: Var[ExplorationData] = Var(ExplorationData.initial)
+  val explorationSignal: Signal[ExplorationData] = explorationData.signal.distinct
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
 
@@ -47,7 +49,9 @@ object Utils {
       }
       .distinct
 
-  val unlockedAntTasks: Signal[Seq[AntTask]] = antsSignal.map(_.tasks.map(_._1)).distinct
+  val unlockedAntTasks: Signal[Seq[AntTask]] =
+    antsSignal.map(_.tasks.sortBy { case (antTask, _) => antTask.uiOrder }.map(_._1)).distinct
+
   val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount).distinct
 
   val sugarSignal: Signal[Long] = resourcesSignal.map(_.sugar).distinct
@@ -109,7 +113,7 @@ object Utils {
           _.modify(_.targetTick)
             .using(_ + passedTicks)
             .modify(_.lastUpdateTime)
-            .using(_ + WorldData.millsPerTick * passedTicks)
+            .using(_ + Constants.millsPerTick * passedTicks)
         )
         ticksBus.writer.onNext(())
       }(owner)
@@ -122,12 +126,14 @@ object Utils {
         nestAttributesData,
         unlocksData,
         upgradesData,
+        explorationData,
         messagesSeq,
       )
-      .foreach { case (world, ants, basic, next, unlocks, upgrades, messages) =>
+      .foreach { case (world, ants, basic, next, unlocks, upgrades, exploration, messages) =>
         val ticksToUpdate = world.targetTick - world.currentTick
         if (ticksToUpdate > 0) {
-          val allData = AllData.simple(world, ants, basic, next, unlocks, upgrades, messages)
+          val allData =
+            AllData.simple(world, ants, basic, next, unlocks, upgrades, exploration, messages)
 
           @tailrec
           def loop(ticksLeft: Long, allData: AllData): AllData =
@@ -150,11 +156,14 @@ object Utils {
         nestAttributesData,
         unlocksData,
         upgradesData,
+        explorationData,
         messagesSeq,
       )
-      .foreach { case (actionFunc, world, ants, basic, next, unlocks, upgrades, messages) =>
-        val allData = AllData.simple(world, ants, basic, next, unlocks, upgrades, messages)
-        actionFunc(allData).updateVars()
+      .foreach {
+        case (actionFunc, world, ants, basic, next, unlocks, upgrades, exploration, messages) =>
+          val allData: AllData =
+            AllData.simple(world, ants, basic, next, unlocks, upgrades, exploration, messages)
+          actionFunc(allData).updateVars()
       }(owner)
 
   def giveResources(sugar: Long): Unit =
