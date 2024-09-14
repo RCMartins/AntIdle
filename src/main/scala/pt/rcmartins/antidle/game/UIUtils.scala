@@ -1,6 +1,7 @@
 package pt.rcmartins.antidle.game
 
 import com.raquo.laminar.api.L.{u => _, _}
+import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.nodes.ReactiveHtmlElement
 import org.scalajs.dom.{html, HTMLDivElement, HTMLSpanElement}
 import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
@@ -8,6 +9,10 @@ import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
 import scala.scalajs.js.timers.setTimeout
 
 object UIUtils {
+
+  val DataBSDismissAttr: HtmlAttr[String] = htmlAttr("data-bs-dismiss", StringAsIsCodec)
+  val MinAttr: HtmlAttr[String] = htmlAttr("min", StringAsIsCodec)
+  val MaxAttr: HtmlAttr[String] = htmlAttr("max", StringAsIsCodec)
 
   def createShowGlobalAlertsDiv(): ReactiveHtmlElement[html.Div] = {
     def alertDiv(

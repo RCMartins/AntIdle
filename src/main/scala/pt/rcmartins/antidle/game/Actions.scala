@@ -20,24 +20,14 @@ object Actions {
       new Random(seed).nextDouble() > chance
     }
 
-  def reduceAntTask(antTask: AntTask): Unit =
+  def reduceAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.ants.tasks)
-        .using(_.map {
-          case (task, amount) if task == antTask => (task, amount - 1L * u)
-          case other                             => other
-        })
+      allData.modify(_.ants).using(_.removeFromTask(antTask, amountU))
     }
 
-  def incrementAntTask(antTask: AntTask): Unit =
+  def incrementAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.ants.tasks)
-        .using(_.map {
-          case (task, amount) if task == antTask => (task, amount + 1L * u)
-          case other                             => other
-        })
+      allData.modify(_.ants).using(_.addToTask(antTask, amountU))
     }
 
   val layEggActionCost: Signal[ActionCost] =
@@ -71,8 +61,7 @@ object Actions {
   def unlockUpgrade(actionCost: ActionCost, unlockAction: UpgradesData => UpgradesData): Unit =
     actionUpdater.writer.onNext { allData =>
       allData
-        .modify(_.basicResources)
-        .using(_.spendResources(actionCost))
+        .spendResources(actionCost)
         .modify(_.upgrades)
         .using(unlockAction)
     }
@@ -128,5 +117,23 @@ object Actions {
       .map(_.level)
       .distinct
       .map(level => ActionCost(buildPower = getChamberBuildPower(chamberType, level)))
+
+  def explore(actionCost: ActionCost): Unit =
+    actionUpdater.writer.onNext {
+      _.purchaseIfPossible(actionCost) { allData =>
+        allData
+          .modify(_.ants)
+          .using(_.addToTask(AntTask.Explorer, actionCost.idleWorkers))
+          .modify(_.exploration.explorationParties)
+          .using(
+            ExplorationParty.create(
+              actionCost.idleWorkers,
+              allData.world.currentTick,
+              Constants.ExplorationTimeTicks,
+            ) :: _
+          )
+      }
+
+    }
 
 }

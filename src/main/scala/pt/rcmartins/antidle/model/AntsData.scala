@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.model
 
+import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import zio.json._
 
@@ -10,7 +11,7 @@ case class AntsData(
     sugarCumulativeDebt: Long = 0,
 ) {
 
-  val idleWorkersCount: Long =
+  lazy val idleWorkersCount: Long =
     workers - tasks.map(_._2).sum
 
   val workersLong: Long = workers / u
@@ -29,6 +30,20 @@ case class AntsData(
         val newCount = count - 1 * u
         copy(tasks = tasks.updated(index, (task, newCount)))
     }
+
+  def hasIdleWorkersForCost(cost: ActionCost): Boolean =
+    idleWorkersCount >= cost.idleWorkers
+
+  def addToTask(antTask: AntTask, deltaAmountU: Long): AntsData =
+    this
+      .modify(_.tasks)
+      .using(_.map {
+        case (task, amount) if task == antTask => (task, amount + deltaAmountU)
+        case other                             => other
+      })
+
+  def removeFromTask(antTask: AntTask, deltaAmountU: Long): AntsData =
+    addToTask(antTask, -deltaAmountU)
 
 }
 

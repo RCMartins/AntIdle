@@ -9,13 +9,13 @@ import org.scalajs.dom
 import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.UINumbersUtils._
+import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game._
 import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
-import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model._
 
 import scala.scalajs.concurrent.JSExecutionContext.queue
@@ -134,6 +134,19 @@ object MainForm {
                 )
               )
             ),
+            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+              li(
+                className := "nav-item",
+                a(
+                  className := "nav-link",
+                  idAttr := "upgrades-tab",
+                  dataAttr("bs-toggle") := "tab",
+                  href := "#exploreContent",
+                  role := "tab",
+                  "Explore",
+                )
+              )
+            ),
             li(
               className := "nav-item",
               a(
@@ -165,12 +178,20 @@ object MainForm {
                 tasksDiv,
               )
             ),
-            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+            child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
               div(
                 className := "tab-pane",
                 idAttr := "upgradesContent",
                 role := "tabpanel",
                 upgradesDiv(owner),
+              )
+            ),
+            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+              div(
+                className := "tab-pane",
+                idAttr := "exploreContent",
+                role := "tabpanel",
+                exploreDiv(owner),
               )
             ),
             div(
@@ -280,7 +301,7 @@ object MainForm {
           case _: BuildTask.FoodStorageChamber => Constants.StorageChamberName
           case _: BuildTask.NurseryChamber     => Constants.NurseryChamberName
         }
-      span(name, " [", prettyNumber1d(buildTask.buildPowerRequired), "]")
+      span(name, " [", prettyNumberSimple(buildTask.buildPowerRequired), "]")
     }
 
     div(
@@ -393,7 +414,7 @@ object MainForm {
             ),
             div(
               className := "col-3 text-end text-nowrap",
-              prettyNumber(value),
+              prettyNumberFixedSize(value),
             ),
             div(
               className := "col-2 text-start text-body-tertiary text-nowrap ps-0",
@@ -402,7 +423,7 @@ object MainForm {
                   if (maxValue == 0)
                     nbsp
                   else
-                    span("/", prettyNumber(maxValue))
+                    span("/", prettyNumberSimple(maxValue))
                 },
             ),
             div(
@@ -457,7 +478,7 @@ object MainForm {
           Actions.layEggActionEnabled,
           Val(Some(div("Ants require a constant sugar supply to stay alive."))),
           Actions.layEggActionCost,
-          Val(ActionBonus(eggs = 1 * u)),
+          Val(ActionBonus(eggs = 1L * u)),
           () => Actions.layEggAction(),
         )
       },
@@ -528,6 +549,7 @@ object MainForm {
               ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
               ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
               ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
+              ifGreater0(cost.idleWorkers)(prettyNumberSimple("", _, " idle workers")),
             )
           },
           child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
@@ -558,26 +580,30 @@ object MainForm {
       className := "d-grid gap-2",
       span(
         "Idle Ants: ",
-        b(child <-- idleWorkersCountSignal.map(prettyNumber)),
+        b(child <-- idleWorkersCountSignal.map(prettyNumberFixedSize)),
       ),
       children <-- unlockedAntTasks.map(_.map(taskDiv)),
     )
 
   private def taskDiv(antTask: AntTask): ReactiveHtmlElement[HTMLDivElement] = {
-    val amountSignal =
+    val amountSignal: Signal[Long] =
       antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2).getOrElse(0L)).distinct
     val id = s"task-${antTask.toString.toLowerCase}"
 
-    val tooltipSignal: ReactiveHtmlElement[HTMLDivElement] = antTask match {
-      case AntTask.SugarCollector =>
-        div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
-      case AntTask.WaterCollector =>
-        div("???")
-      case AntTask.Nursery =>
-        div("???")
-      case AntTask.NestBuilder =>
-        div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
-    }
+    // TODO: Improve this, add bonuses dynamically, instead of constants
+    val tooltipSignal: ReactiveHtmlElement[HTMLDivElement] =
+      antTask match {
+        case AntTask.SugarCollector =>
+          div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
+        case AntTask.WaterCollector =>
+          div("???")
+        case AntTask.Nursery =>
+          div("???")
+        case AntTask.NestBuilder =>
+          div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
+        case AntTask.Explorer =>
+          div("Ants exploring the surroundings.")
+      }
 
     div(
       idAttr := id,
@@ -589,6 +615,7 @@ object MainForm {
           case AntTask.WaterCollector => "Water Collector"
           case AntTask.NestBuilder    => "Nest Builder"
           case AntTask.Nursery        => "Nursery"
+          case AntTask.Explorer       => "Explorer"
         },
         nbsp,
         "(",
@@ -597,25 +624,29 @@ object MainForm {
       ),
       div(
         className := "col-2",
-        button(
-          className := "btn btn-primary",
-          className := "m-1",
-          cursor.pointer,
-          i(
-            className := "fa-solid fa-minus",
+        when(antTask.showButtons)(
+          button(
+            className := "btn btn-primary",
+            className := "m-1",
+            cursor.pointer,
+            i(
+              className := "fa-solid fa-minus",
+            ),
+            disabled <-- amountSignal.map(_ == 0),
+            onClick --> { _ => Actions.reduceAntTask(antTask) }
           ),
-          disabled <-- amountSignal.map(_ == 0),
-          onClick --> { _ => Actions.reduceAntTask(antTask) }
         ),
-        button(
-          className := "btn btn-primary",
-          className := "m-1",
-          cursor.pointer,
-          i(
-            className := "fa-solid fa-plus",
+        when(antTask.showButtons)(
+          button(
+            className := "btn btn-primary",
+            className := "m-1",
+            cursor.pointer,
+            i(
+              className := "fa-solid fa-plus",
+            ),
+            disabled <-- idleWorkersCountSignal.map(_ == 0),
+            onClick --> { _ => Actions.incrementAntTask(antTask) }
           ),
-          disabled <-- idleWorkersCountSignal.map(_ == 0),
-          onClick --> { _ => Actions.incrementAntTask(antTask) }
         ),
       ),
       div(className := "col-4"),
@@ -624,19 +655,17 @@ object MainForm {
 
   private def upgradesDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def createUpgrade(
-        name: String,
         upgradeType: UpgradeType,
         unlockFunc: UpgradesData => UpgradesData = identity,
-        description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
     ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
       val costSignal: Signal[ActionCost] = Val(upgradeType.cost)
       val upgradeSignal: Signal[UpgradeData] = upgradesSignal.map(_(upgradeType))
       ifUpgradeReadyToBuyOpt(upgradeSignal) {
         actionButton(
-          name = name,
+          name = upgradeType.name,
           costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
           hasResourcesSignal(costSignal),
-          description,
+          Val(Some(div(upgradeType.description))),
           costSignal,
           Val(ActionBonus.empty),
           () =>
@@ -652,32 +681,99 @@ object MainForm {
 
     div(
       className := "row",
-      child.maybe <-- createUpgrade(
-        name = "Unlock Queen's Chamber",
-        UnlockQueensChamber,
-        description =
-          Val(Some(div("Unlock the ability to improves the queen's chamber abilities."))),
+      UpgradeType.all.map { upgradeType =>
+        div(
+          child.maybe <--
+            createUpgrade(upgradeType)
+        )
+      },
+    )
+  }
+
+  private def exploreDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+    def createExploreArea(
+        name: String,
+        unlockFunc: Signal[Boolean],
+        costSignal: Signal[ActionCost],
+        description: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
+    ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] =
+      ifUnlockedOpt(unlockFunc) {
+        actionButton(
+          name = name,
+          Val(None),
+          hasResourcesSignal(costSignal).combineWith(explorationSignal).map {
+            case (hasResources, exploration) =>
+              hasResources && exploration.explorationParties.sizeIs < Constants.MaxExplorationParties
+          },
+          description,
+          costSignal,
+          Val(ActionBonus.empty),
+          () =>
+            useSignalValue[ActionCost](
+              owner,
+              costSignal,
+              actionCost => Actions.explore(actionCost),
+            ),
+        )
+      }
+
+    val amountOfExplorersVar: Var[Long] = Var(1L * u)
+
+    div(
+      className := "row",
+      div(
+        className := "col-12 px-3 py-2 d-grid",
+        div(
+          className := "row px-0",
+          className := "d-flex justify-content-start align-items-center",
+          div(
+            className := "col-6",
+            "Number of explorers to send:",
+            nbsp,
+            child <-- amountOfExplorersVar.signal.map(amount => b(prettyNumberInt(amount))),
+          ),
+          div(
+            className := "col-6",
+            input(
+              className := "form-range",
+              `type` := "range",
+              MinAttr := "1",
+              MaxAttr <-- maxWorkers.map(amount => (amount / u).toString),
+              value <-- amountOfExplorersVar.signal.map(amount => (amount / u).toString),
+              onInput --> { ev =>
+                val value = ev.target.asInstanceOf[HTMLInputElement].value.toLong
+                amountOfExplorersVar.set(value * u)
+              },
+            ),
+          ),
+        ),
       ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 1",
-        ImproveSugarCollectorTask1,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
+      child.maybe <-- createExploreArea(
+        name = "Explore Surroundings",
+        Val(true),
+        amountOfExplorersVar.signal.map(amount =>
+          ActionCost(sugar = amount * 10, idleWorkers = amount)
+        ),
+        description = Val(Some(div("Send explorer ants out exploring the nest surroundings."))),
       ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 2",
-        ImproveSugarCollectorTask2,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
+      div(
+        className := "pt-3 px-3",
+        "Number of exploration parties: ",
+        child <-- explorationSignal.map(_.explorationParties.size),
+        " / ",
+        b(Constants.MaxExplorationParties),
       ),
-      child.maybe <-- createUpgrade(
-        name = "Foraging Techniques 3",
-        ImproveSugarCollectorTask3,
-        description = Val(Some(div("Improves the ants sugar collecting amount by 15%."))),
-      ),
-      child.maybe <-- createUpgrade(
-        name = "Unlock Food Storage Chamber",
-        UnlockFoodStorageChamber,
-        description = Val(Some(div("Unlock the ability to improves the food storage capacity."))),
-      ),
+      div(
+        className := "col-12 pt-3 d-grid",
+        children <-- explorationSignal.map {
+          _.explorationParties.map { case ExplorationParty(amountWorkers, _, targetTick) =>
+            div(
+              b(s"[${prettyNumberStr(amountWorkers)} Explorer Ant${plural(amountWorkers / u)}] "),
+              child.text <-- currentTickSignal.map(targetTick - _).map(prettyTimeFromTicks),
+            )
+          }
+        }
+      )
     )
   }
 

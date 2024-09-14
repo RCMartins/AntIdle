@@ -1,6 +1,6 @@
 package pt.rcmartins.antidle.model
 
-import pt.rcmartins.antidle.model.WorldData._
+import pt.rcmartins.antidle.game.Constants.millsPerTick
 import zio.json._
 
 import scala.util.Random
@@ -24,9 +24,6 @@ object WorldData {
 
   implicit val decoder: JsonDecoder[WorldData] = DeriveJsonDecoder.gen[WorldData]
   implicit val encoder: JsonEncoder[WorldData] = DeriveJsonEncoder.gen[WorldData]
-
-  val TicksPerSecond: Long = 5
-  val millsPerTick: Long = 1000 / TicksPerSecond
 
   def initial(currentTime: Long): WorldData =
     WorldData(

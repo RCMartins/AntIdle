@@ -7,6 +7,7 @@ case class Unlocks(
     actions: ActionUnlocks = ActionUnlocks(),
     tabs: TabUnlocks = TabUnlocks(),
     resources: ResourceUnlocks = ResourceUnlocks(),
+    exploration: ExplorationUnlocks = ExplorationUnlocks(),
     general: GeneralUnlocks = GeneralUnlocks(),
 )
 
@@ -31,6 +32,7 @@ object Unlocks {
       antTasksUnlocked: Boolean = false,
       buildQueueUnlocked: Boolean = false,
       upgradesTabUnlocked: Boolean = false,
+      exploreTabUnlocked: Boolean = false,
   )
 
   object TabUnlocks {
@@ -47,6 +49,18 @@ object Unlocks {
   object ResourceUnlocks {
     implicit val decoder: JsonDecoder[ResourceUnlocks] = DeriveJsonDecoder.gen[ResourceUnlocks]
     implicit val encoder: JsonEncoder[ResourceUnlocks] = DeriveJsonEncoder.gen[ResourceUnlocks]
+  }
+
+  case class ExplorationUnlocks(
+  )
+
+  object ExplorationUnlocks {
+    implicit val decoder: JsonDecoder[ExplorationUnlocks] =
+      DeriveJsonDecoder.gen[ExplorationUnlocks]
+
+    implicit val encoder: JsonEncoder[ExplorationUnlocks] =
+      DeriveJsonEncoder.gen[ExplorationUnlocks]
+
   }
 
   case class GeneralUnlocks(

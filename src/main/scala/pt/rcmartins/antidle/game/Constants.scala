@@ -1,9 +1,6 @@
 package pt.rcmartins.antidle.game
 
 import pt.rcmartins.antidle.model.Chamber.ChamberType
-import pt.rcmartins.antidle.model.WorldData._
-
-import scala.util.Random
 
 object Constants {
 
@@ -12,6 +9,19 @@ object Constants {
   val ImportModalId: String = "importModal"
   val AlertTimeout: Int = 5000
 
+  // Time Constants
+
+  val TicksPerSecond: Long = 5
+  val millsPerTick: Long = 1000 / TicksPerSecond
+  val MaxTicksCatchUp: Int = 10
+
+  private def tickAndSeconds(perSecondValue: Long): (Long, Long) =
+    (perSecondValue / TicksPerSecond, perSecondValue)
+
+  def ExplorationTimeTicks: Long = 15 * TicksPerSecond
+
+  // Other Constants
+
   @inline final val u: Long = 10000L
 
   val MaxExponent = 100
@@ -19,8 +29,6 @@ object Constants {
   val exponent1_14: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.14, _))
   val exponent1_25: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.25, _))
   val exponent1_75: IndexedSeq[Double] = (0 to MaxExponent).map(Math.pow(1.75, _))
-
-  val MaxTicksCatchUp: Int = 10
 
   val LayEggSugarCost: Long = 10 * u
 
@@ -43,9 +51,6 @@ object Constants {
 
   val AntDeathRiskThreshold: Long = 10 * u
 
-  private def tickAndSeconds(perSecondValue: Long): (Long, Long) =
-    (perSecondValue / TicksPerSecond, perSecondValue)
-
   val NestUpgradeName = "Expand Nest"
   val QueenChamberName = "Queen's Chamber"
   val StorageChamberName = "Food Storage Chamber"
@@ -62,5 +67,7 @@ object Constants {
       case ChamberType.Nursery     => 0 // TODO
     }
   }
+
+  val MaxExplorationParties: Int = 1
 
 }
