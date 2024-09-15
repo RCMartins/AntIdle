@@ -16,14 +16,23 @@ case class AntsData(
 
   val workersLong: Long = workers / u
 
+  lazy val upkeepWorkersLong: Long =
+    (idleWorkersCount +
+      tasks.map { case (task, amount) => if (task.hasAntUpkeep) amount else 0 }.sum) / u
+
   def unlockTask(antTask: AntTask): AntsData =
     if (tasks.exists(_._1 == antTask))
       this
     else
-      copy(tasks = tasks :+ (antTask, 0))
+      copy(tasks = sortTasks(tasks :+ (antTask, 0)))
 
-  def remove1WorkerFromLastTask: AntsData =
-    tasks.zipWithIndex.findLast(_._1._2 > 0) match {
+  private def sortTasks(tasks: Seq[(AntTask, Long)]): Seq[(AntTask, Long)] =
+    tasks.sortBy { case (antTask, _) => antTask.uiOrder }
+
+  def remove1WorkerFromLastUpkeepTask: AntsData =
+    tasks.zipWithIndex.findLast { case ((task, amount), _) =>
+      task.hasAntUpkeep && amount > 0
+    } match {
       case None =>
         this
       case Some(((task, count), index)) =>

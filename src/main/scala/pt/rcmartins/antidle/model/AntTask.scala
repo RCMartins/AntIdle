@@ -4,8 +4,11 @@ import zio.json._
 
 sealed trait AntTask {
 
-  val uiOrder: Int
+  def uiOrder: Int
+
   val showButtons: Boolean = true
+
+  val hasAntUpkeep: Boolean = true
 
 }
 
@@ -33,6 +36,7 @@ object AntTask {
   case object Explorer extends AntTask {
     val uiOrder: Int = 100
     override val showButtons: Boolean = false
+    override val hasAntUpkeep: Boolean = false
   }
 
 }

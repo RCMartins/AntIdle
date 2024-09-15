@@ -33,7 +33,7 @@ object UINumbersUtils {
           (shortValue / 100).toString,
           ".",
           f"${shortValue % 100}%02d",
-          Suffixes(suffixNum),
+          if (suffixNum == 0) span(opacity := 0, "K") else Suffixes(suffixNum),
         )
       }
     else

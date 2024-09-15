@@ -50,7 +50,7 @@ object Utils {
       .distinct
 
   val unlockedAntTasks: Signal[Seq[AntTask]] =
-    antsSignal.map(_.tasks.sortBy { case (antTask, _) => antTask.uiOrder }.map(_._1)).distinct
+    antsSignal.map(_.tasks.map(_._1)).distinct
 
   val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount).distinct
 

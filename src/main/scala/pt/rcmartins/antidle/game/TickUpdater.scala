@@ -113,7 +113,7 @@ object TickUpdater {
         },
         // This update should always be the last, so that all the resources are updated before the sugar upkeep
         allData => {
-          val sugarUpkeep = allData.ants.workersLong * Constants.antsSugarUpkeepTick
+          val sugarUpkeep = allData.ants.upkeepWorkersLong * Constants.antsSugarUpkeepTick
           val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
 
           allData
@@ -144,7 +144,7 @@ object TickUpdater {
                         .using { antsData =>
                           (
                             if (antsData.idleWorkersCount < 0)
-                              antsData.remove1WorkerFromLastTask
+                              antsData.remove1WorkerFromLastUpkeepTask
                             else
                               antsData
                           )
