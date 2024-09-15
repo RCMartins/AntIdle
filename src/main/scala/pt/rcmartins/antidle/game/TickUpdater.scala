@@ -143,7 +143,7 @@ object TickUpdater {
                         .modify(_.ants)
                         .using { antsData =>
                           (
-                            if (antsData.idleWorkersCount < 0)
+                            if (antsData.idleWorkersCount == 0)
                               antsData.remove1WorkerFromLastUpkeepTask
                             else
                               antsData
