@@ -20,12 +20,12 @@ object Actions {
       new Random(seed).nextDouble() > chance
     }
 
-  def reduceAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
+  def reduceAntTask(antTask: AntTask, amountU: Long): Unit =
     actionUpdater.writer.onNext { allData =>
       allData.modify(_.ants).using(_.removeFromTask(antTask, amountU))
     }
 
-  def incrementAntTask(antTask: AntTask, amountU: Long = 1L * u): Unit =
+  def incrementAntTask(antTask: AntTask, amountU: Long): Unit =
     actionUpdater.writer.onNext { allData =>
       allData.modify(_.ants).using(_.addToTask(antTask, amountU))
     }

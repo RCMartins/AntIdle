@@ -3,7 +3,7 @@ package pt.rcmartins.antidle.game
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.codecs.StringAsIsCodec
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import org.scalajs.dom.{html, HTMLDivElement, HTMLSpanElement}
+import org.scalajs.dom.{html, HTMLDivElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
 
 import scala.scalajs.js.timers.setTimeout
@@ -54,5 +54,10 @@ object UIUtils {
       }
     )
   }
+
+  def getMouseEventMultiplier(event: MouseEvent): Long =
+    (if (event.ctrlKey) 10L else 1L) *
+      (if (event.shiftKey) 25L else 1L) *
+      (if (event.altKey) 100L else 1L)
 
 }

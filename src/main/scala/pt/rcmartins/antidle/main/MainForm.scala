@@ -633,7 +633,9 @@ object MainForm {
               className := "fa-solid fa-minus",
             ),
             disabled <-- amountSignal.map(_ == 0),
-            onClick --> { _ => Actions.reduceAntTask(antTask) }
+            onClick --> { mouseEvent =>
+              Actions.reduceAntTask(antTask, getMouseEventMultiplier(mouseEvent) * u)
+            }
           ),
         ),
         when(antTask.showButtons)(
@@ -645,7 +647,9 @@ object MainForm {
               className := "fa-solid fa-plus",
             ),
             disabled <-- idleWorkersCountSignal.map(_ == 0),
-            onClick --> { _ => Actions.incrementAntTask(antTask) }
+            onClick --> { mouseEvent =>
+              Actions.incrementAntTask(antTask, getMouseEventMultiplier(mouseEvent) * u)
+            }
           ),
         ),
       ),

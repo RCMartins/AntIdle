@@ -38,8 +38,10 @@ case class AntsData(
     this
       .modify(_.tasks)
       .using(_.map {
-        case (task, amount) if task == antTask => (task, amount + deltaAmountU)
-        case other                             => other
+        case (task, amount) if task == antTask =>
+          (task, Math.max(0L, amount + Math.min(idleWorkersCount, deltaAmountU)))
+        case other =>
+          other
       })
 
   def removeFromTask(antTask: AntTask, deltaAmountU: Long): AntsData =
