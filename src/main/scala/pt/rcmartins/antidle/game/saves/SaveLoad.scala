@@ -1,15 +1,24 @@
 package pt.rcmartins.antidle.game.saves
 
 import org.scalajs.dom.window.localStorage
+import pt.rcmartins.antidle.game.Utils.{actionUpdater, unlocksOwner}
+import pt.rcmartins.antidle.game.{UnlockUtils, Utils}
+import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
 import pt.rcmartins.antidle.model.AllData
 import zio.json._
 
+import scala.util.Try
+import scala.util.chaining.scalaUtilChainingOps
+
+// TODO check for save/load/import/export errors?
 object SaveLoad {
 
   private val SaveGameName = "save"
 
-  def saveToLocalStorage(allData: AllData): Unit =
-    localStorage.setItem(SaveGameName, saveString(allData))
+  def saveToLocalStorage(allData: AllData): Either[Throwable, Unit] =
+    Try {
+      localStorage.setItem(SaveGameName, saveString(allData))
+    }.toEither
 
   def saveString(allData: AllData): String =
     jsonToBase64(saveToJson(allData))
@@ -38,5 +47,17 @@ object SaveLoad {
 
   private def base64ToJson(str: String): String =
     new String(java.util.Base64.getDecoder.decode(str.getBytes))
+
+  def reloadDataFromLoadedSave(
+      loadedAllData: AllData,
+      messageAlert: Option[String] = Some("Game Loaded!"),
+  ): Unit = {
+    Utils.pause = true
+    unlocksOwner.killAll()
+    actionUpdater.writer.onNext(_ => loadedAllData)
+    actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
+    Utils.pause = false
+    currentGlobalAlert.set(messageAlert)
+  }
 
 }

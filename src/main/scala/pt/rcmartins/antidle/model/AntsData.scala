@@ -63,4 +63,6 @@ object AntsData {
   implicit val decoder: JsonDecoder[AntsData] = DeriveJsonDecoder.gen[AntsData]
   implicit val encoder: JsonEncoder[AntsData] = DeriveJsonEncoder.gen[AntsData]
 
+  val initial: AntsData = AntsData()
+
 }

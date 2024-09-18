@@ -14,19 +14,19 @@ object Utils {
   var pause: Boolean = false
   val unlocksOwner: SubscriptionManager = new SubscriptionManager
 
-  val worldData: Var[WorldData] = Var(WorldData.initial(System.currentTimeMillis()))
-  val antsData: Var[AntsData] = Var(AntsData())
+  val worldData: Var[WorldData] = Var(AllData.initial.world)
+  val antsData: Var[AntsData] = Var(AllData.initial.ants)
   val antsSignal: Signal[AntsData] = antsData.signal
-  val basicResourcesData: Var[BasicResources] = Var(BasicResources())
+  val basicResourcesData: Var[BasicResources] = Var(AllData.initial.basicResources)
   val resourcesSignal: Signal[BasicResources] = basicResourcesData.signal
-  val nestAttributesData: Var[NestAttributes] = Var(NestAttributes())
+  val nestAttributesData: Var[NestAttributes] = Var(AllData.initial.nestAttributes)
   val nestSignal: Signal[NestAttributes] = nestAttributesData.signal
   val chambersSignal: Signal[AllChamberData] = nestSignal.map(_.chambers).distinct
-  val unlocksData: Var[Unlocks] = Var(Unlocks())
+  val unlocksData: Var[Unlocks] = Var(AllData.initial.unlocks)
   val unlocksSignal: Signal[Unlocks] = unlocksData.signal.distinct
-  val upgradesData: Var[UpgradesData] = Var(UpgradesData.initial)
+  val upgradesData: Var[UpgradesData] = Var(AllData.initial.upgrades)
   val upgradesSignal: Signal[UpgradesData] = upgradesData.signal.distinct
-  val explorationData: Var[ExplorationData] = Var(ExplorationData.initial)
+  val explorationData: Var[ExplorationData] = Var(AllData.initial.exploration)
   val explorationSignal: Signal[ExplorationData] = explorationData.signal.distinct
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct

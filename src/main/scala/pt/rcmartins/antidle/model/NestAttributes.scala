@@ -20,4 +20,6 @@ object NestAttributes {
   implicit val decoder: JsonDecoder[NestAttributes] = DeriveJsonDecoder.gen[NestAttributes]
   implicit val encoder: JsonEncoder[NestAttributes] = DeriveJsonEncoder.gen[NestAttributes]
 
+  val initial: NestAttributes = NestAttributes()
+
 }

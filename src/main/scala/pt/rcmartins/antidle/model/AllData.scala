@@ -63,6 +63,18 @@ object AllData {
 
   private val MaxMessages = 10
 
+  val initial: AllData =
+    AllData(
+      world = WorldData.initial(System.currentTimeMillis()),
+      ants = AntsData.initial,
+      basicResources = BasicResources.initial,
+      nestAttributes = NestAttributes.initial,
+      unlocks = Unlocks.initial,
+      upgrades = UpgradesData.initial,
+      exploration = ExplorationData.initial,
+      messages = Seq.empty,
+    )
+
   def simple(
       world: WorldData,
       ants: AntsData,

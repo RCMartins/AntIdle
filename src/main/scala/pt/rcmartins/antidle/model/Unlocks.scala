@@ -16,6 +16,8 @@ object Unlocks {
   implicit val decoder: JsonDecoder[Unlocks] = DeriveJsonDecoder.gen[Unlocks]
   implicit val encoder: JsonEncoder[Unlocks] = DeriveJsonEncoder.gen[Unlocks]
 
+  val initial: Unlocks = Unlocks()
+
   case class ActionUnlocks(
       canLayEggs: Boolean = false,
       canBuildNestUpgrade: Boolean = false,

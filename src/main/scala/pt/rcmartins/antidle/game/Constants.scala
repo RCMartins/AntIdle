@@ -7,6 +7,7 @@ object Constants {
   // UI Constants
 
   val ImportModalId: String = "importModal"
+  val NewGameModalId: String = "newGameModal"
   val AlertTimeout: Int = 5000
 
   // Time Constants

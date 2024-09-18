@@ -33,4 +33,6 @@ object BasicResources {
   implicit val decoder: JsonDecoder[BasicResources] = DeriveJsonDecoder.gen[BasicResources]
   implicit val encoder: JsonEncoder[BasicResources] = DeriveJsonEncoder.gen[BasicResources]
 
+  val initial: BasicResources = BasicResources()
+
 }

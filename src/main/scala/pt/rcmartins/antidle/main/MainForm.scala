@@ -229,45 +229,51 @@ object MainForm {
         windowWidthVar.set(window.innerWidth.toLong)
       },
       Modals.importModal(),
+      Modals.newGameModal(),
       UIUtils.createShowGlobalAlertsDiv(),
     )
   }
 
-  private def settingsDiv: ReactiveHtmlElement[HTMLDivElement] =
+  private def settingsDiv: ReactiveHtmlElement[HTMLDivElement] = {
+    def settingsButton(
+        name: String,
+        onClickF: () => Unit,
+        buttonClass: String = "btn-primary",
+    ): ReactiveHtmlElement[HTMLDivElement] =
+      div(
+        className := "col-6 px-3 py-2 d-grid",
+        button(
+          className := "btn fs-4",
+          className := buttonClass,
+          `type` := "button",
+          name,
+          onClick --> { _ => onClickF() }
+        ),
+      )
+
     div(
-      className := "d-grid gap-2",
-      button(
-        className := "btn btn-primary col-5 m-1",
-        className := "fs-4",
-        `type` := "button",
+      className := "row",
+      settingsButton(
         "Save",
-        onClick --> { _ =>
-          actionUpdater.writer.onNext(_.tap(SaveLoad.saveToLocalStorage))
-        }
+        () =>
+          actionUpdater.writer.onNext(
+            _.tap(
+              SaveLoad
+                .saveToLocalStorage(_)
+                .foreach(_ => currentGlobalAlert.set(Some("Game Saved!")))
+            )
+          )
       ),
-      button(
-        className := "btn btn-primary col-5 m-1",
-        className := "fs-4",
-        `type` := "button",
+      settingsButton(
         "Load",
-        onClick --> { _ =>
+        () =>
           SaveLoad
             .loadFromLocalStorage()
-            .foreach { loadedAllData =>
-              Utils.pause = true
-              unlocksOwner.killAll()
-              actionUpdater.writer.onNext(_ => loadedAllData)
-              actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
-              Utils.pause = false
-            }
-        }
+            .foreach(SaveLoad.reloadDataFromLoadedSave(_))
       ),
-      button(
-        className := "btn btn-primary col-5 m-1",
-        className := "fs-4",
-        `type` := "button",
+      settingsButton(
         "Export",
-        onClick --> { _ =>
+        () =>
           actionUpdater.writer.onNext {
             _.tap { allData =>
               val dataStr = SaveLoad.saveString(allData)
@@ -278,19 +284,23 @@ object MainForm {
                   )(queue)
                 )
             }
-          }
-        }
+          },
       ),
-      button(
-        className := "btn btn-primary col-5 m-1",
-        className := "fs-4",
-        `type` := "button",
+      settingsButton(
         "Import",
-        onClick --> { _ =>
+        () => {
           jquery.$(s"#${Constants.ImportModalId}").asInstanceOf[js.Dynamic].modal("show")
-        }
-      )
+        },
+      ),
+      settingsButton(
+        "Hard Reset",
+        () => {
+          jquery.$(s"#${Constants.NewGameModalId}").asInstanceOf[js.Dynamic].modal("show")
+        },
+        buttonClass = "btn-danger",
+      ),
     )
+  }
 
   private def buildQueueDiv: ReactiveHtmlElement[HTMLDivElement] = {
     def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] = {
