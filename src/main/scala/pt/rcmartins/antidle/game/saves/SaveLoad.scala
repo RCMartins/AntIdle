@@ -55,7 +55,7 @@ object SaveLoad {
     Utils.pause = true
     unlocksOwner.killAll()
     actionUpdater.writer.onNext(_ => loadedAllData)
-    actionUpdater.writer.onNext(_.tap(_ => UnlockUtils.checkUnlocks(unlocksOwner)))
+    actionUpdater.writer.onNext(_.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner)))
     Utils.pause = false
     currentGlobalAlert.set(messageAlert)
   }

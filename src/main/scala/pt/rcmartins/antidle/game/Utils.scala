@@ -8,6 +8,7 @@ import pt.rcmartins.antidle.model._
 
 import scala.annotation.tailrec
 import scala.scalajs.js.timers.setInterval
+import scala.util.chaining.scalaUtilChainingOps
 
 object Utils {
 
@@ -92,9 +93,9 @@ object Utils {
     val owner = new OneTimeOwner(() => ())
     initializeTicksUpdater(owner)
     initializeActionUpdater(owner)
-    UnlockUtils.checkUnlocks(unlocksOwner)
     addMessage("We should collect some sugar to feed our queen.")
     setInterval(200)(updateState())
+    actionUpdater.writer.onNext(_.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner)))
   }
 
   def addMessage(message: String): Unit =
