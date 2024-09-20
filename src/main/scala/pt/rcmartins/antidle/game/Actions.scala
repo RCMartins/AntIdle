@@ -30,9 +30,6 @@ object Actions {
       allData.modify(_.ants).using(_.addToTask(antTask, amountU))
     }
 
-  val layEggActionCost: Signal[ActionCost] =
-    Val(ActionCost(sugar = Constants.LayEggSugarCost))
-
   val layEggActionEnabled: Signal[Boolean] =
     sugarSignal
       .combineWith(eggsCountSignal, maxEggs, antAndBroodCount, maxWorkers)
@@ -40,15 +37,25 @@ object Actions {
         sugar >= Constants.LayEggSugarCost && eggsCount < maxEggs && antCount < maxAnt
       }
 
-  def layEggAction(): Unit =
+  def layEggAction(maxMultiplierUsed: Int): Unit =
     actionUpdater.writer.onNext { allData =>
+      val maxEggs: Int =
+        Math.min(
+          allData.nestAttributes.maxEggsCount,
+          allData.nestAttributes.maxWorkersCount - allData.ants.workersAndLarvaeCount,
+        )
+
+      val mult: Int =
+        Math.min(
+          Math.min(maxMultiplierUsed, maxEggs),
+          (allData.basicResources.sugar / Constants.LayEggSugarCost).toInt,
+        )
+
       allData
         .modify(_.basicResources.sugar)
-        .using(_ - Constants.LayEggSugarCost)
+        .using(_ - Constants.LayEggSugarCost * mult)
         .modify(_.ants.eggsAndLarvae)
-        .using(_ :+ AntBrood.Egg(allData.world.currentTick))
-        .modify(_.unlocks.resources.showEggs)
-        .setTo(true)
+        .using(_ ++ Seq.fill(mult)(AntBrood.Egg(allData.world.currentTick)))
     }
 
   def addBuildTask(buildTask: BuildTask): Unit =

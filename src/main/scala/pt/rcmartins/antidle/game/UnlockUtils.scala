@@ -22,6 +22,15 @@ object UnlockUtils {
         )
     )
 
+    unlockSubscription[AntsData](
+      antsSignal,
+      _.eggsAndLarvae.nonEmpty,
+      _ =>
+        Var.update(
+          unlocksData -> ((_: Unlocks).modify(_.resources.showEggs).setTo(true))
+        )
+    )
+
     unlockSubscription[Long](
       workersSignal,
       _ >= 1 * u,

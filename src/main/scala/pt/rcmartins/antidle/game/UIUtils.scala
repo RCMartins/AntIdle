@@ -55,9 +55,11 @@ object UIUtils {
     )
   }
 
-  def getMouseEventMultiplier(event: MouseEvent): Long =
-    (if (event.ctrlKey) 10L else 1L) *
-      (if (event.shiftKey) 25L else 1L) *
-      (if (event.altKey) 100L else 1L)
+  def getMouseEventMultiplier(event: MouseEvent): Int =
+    getMouseEventMultiplier(event.ctrlKey, event.shiftKey)
+
+  def getMouseEventMultiplier(ctrlKey: Boolean, shiftKey: Boolean): Int =
+    (if (ctrlKey) 10 else 1) *
+      (if (shiftKey) 25 else 1)
 
 }

@@ -13,7 +13,12 @@ case class NestAttributes(
     maxEggs: Long = QueenChamberBonusMaxEggs,
     maxWorkers: Long = NestUpgradeBonusMaxWorkers,
     maxBuildQueue: Int = 1,
-)
+) {
+
+  def maxEggsCount: Int = (maxEggs / u).toInt
+  def maxWorkersCount: Int = (maxWorkers / u).toInt
+
+}
 
 object NestAttributes {
 

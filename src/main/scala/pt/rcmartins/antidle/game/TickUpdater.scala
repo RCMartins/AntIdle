@@ -94,7 +94,7 @@ object TickUpdater {
         allData => {
           allData.giveResources(
             colonyPoints = allData.nestAttributes.chambers.nestChamber.level *
-              allData.ants.workersLong *
+              allData.ants.workersCount *
               Constants.defaultNestLevelColonyPointsTick,
           )
         },

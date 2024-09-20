@@ -104,7 +104,7 @@ object Utils {
     if (!pause)
       updateBus.writer.onNext(())
 
-  private def initializeTicksUpdater(owner: Owner): Unit = {
+  private def initializeTicksUpdater(implicit owner: Owner): Unit = {
     updateBus.events
       .sample(worldData)
       .foreach { world =>
@@ -116,7 +116,7 @@ object Utils {
             .using(_ + Constants.millsPerTick * passedTicks)
         )
         ticksBus.writer.onNext(())
-      }(owner)
+      }
 
     ticksBus.events
       .sample(
@@ -144,10 +144,10 @@ object Utils {
 
           loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
         }
-      }(owner)
+      }
   }
 
-  private def initializeActionUpdater(owner: Owner): Unit =
+  private def initializeActionUpdater(implicit owner: Owner): Unit =
     actionUpdater.events
       .withCurrentValueOf(
         worldData,
@@ -164,7 +164,7 @@ object Utils {
           val allData: AllData =
             AllData.simple(world, ants, basic, next, unlocks, upgrades, exploration, messages)
           actionFunc(allData).updateVars()
-      }(owner)
+      }
 
   def giveResources(sugar: Long): Unit =
     actionUpdater.writer.onNext { allData =>
@@ -202,7 +202,7 @@ object Utils {
   def ifGreater0[A](compareValue: Long)(func: Long => A): Option[A] =
     if (compareValue == 0) None else Some(func(compareValue))
 
-  def useSignalValue[A](owner: Owner, signal: Signal[A], action: A => Unit): Unit = {
+  def useSignalValue[A](signal: Signal[A], action: A => Unit)(implicit owner: Owner): Unit = {
     val eventBus: EventBus[Unit] = new EventBus
 
     var subscription: Subscription = null
@@ -211,7 +211,7 @@ object Utils {
       .foreach { signalValue =>
         action(signalValue)
         subscription.kill()
-      }(owner)
+      }
 
     eventBus.writer.onNext(())
   }

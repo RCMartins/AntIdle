@@ -42,6 +42,16 @@ object MainForm {
       child <-- tooltipContent.signal,
     )
 
+  private val ctrlPressedVar = Var(false)
+  private val shiftPressedVar = Var(false)
+
+  private val modifiersMultiplierSignal: Signal[Int] =
+    ctrlPressedVar.signal
+      .combineWith(shiftPressedVar.signal)
+      .map { case (ctrl, shift) =>
+        getMouseEventMultiplier(ctrl, shift)
+      }
+
   private def setTooltip(
       elem: ReactiveHtmlElement[HTMLDivElement],
       contentSignal: ReactiveHtmlElement[HTMLDivElement]
@@ -75,6 +85,15 @@ object MainForm {
     )
 
     initialize()
+
+    dom.document.onkeydown = (e: dom.KeyboardEvent) => {
+      if (e.ctrlKey) ctrlPressedVar.set(true)
+      if (e.shiftKey) shiftPressedVar.set(true)
+    }
+    dom.document.onkeyup = (e: dom.KeyboardEvent) => {
+      if (!e.ctrlKey) ctrlPressedVar.set(false)
+      if (!e.shiftKey) shiftPressedVar.set(false)
+    }
 
     div(
       className := "m-2",
@@ -444,7 +463,7 @@ object MainForm {
         )
     }
 
-  private def nestDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+  private def nestDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def standardBuyChamber(
         name: String,
         chamberType: ChamberType,
@@ -455,14 +474,14 @@ object MainForm {
         val actionCost = Actions.buildChamberCost(chamberType)
         actionButton(
           name = name,
-          chamberSignal.map(_.level).distinct.map(Some(_).filter(_ > 0).map(span(_))),
-          Actions.buildChamberBuyEnabled,
-          Val(None),
-          actionCost,
-          Actions.getActionBonus(chamberType),
-          () =>
+          topRightBadgeSignal =
+            chamberSignal.map(_.level).distinct.map(Some(_).filter(_ > 0).map(span(_))),
+          enabledSignal = Actions.buildChamberBuyEnabled,
+          descriptionSignal = Val(None),
+          costSignal = actionCost,
+          bonusSignal = Actions.getActionBonus(chamberType),
+          onClickAction = _ =>
             useSignalValue[ActionCost](
-              owner,
               actionCost,
               actionCost =>
                 Actions.addBuildTask(Actions.getBuildTask(chamberType, actionCost.buildPower))
@@ -474,22 +493,26 @@ object MainForm {
       className := "row",
       actionButton(
         name = "Gather Sugar",
-        Val(None),
-        Val(true),
-        Val(None),
-        Val(ActionCost.empty),
-        Val(ActionBonus(sugar = 1 * u)),
-        () => giveResources(sugar = PlayerGatherSugarClickAmount),
+        enabledSignal = Val(true),
+        descriptionSignal = Val(None),
+        costSignal = Val(ActionCost.empty),
+        bonusSignal = Val(ActionBonus(sugar = 1 * u)),
+        onClickAction = _ => giveResources(sugar = PlayerGatherSugarClickAmount),
       ),
       child.maybe <-- ifUnlockedOpt(_.actions.canLayEggs) {
         actionButton(
           name = "Lay Egg",
-          Val(None),
-          Actions.layEggActionEnabled,
-          Val(Some(div("Ants require a constant sugar supply to stay alive."))),
-          Actions.layEggActionCost,
-          Val(ActionBonus(eggs = 1L * u)),
-          () => Actions.layEggAction(),
+          topLeftBadgeSignal = modifiersMultiplierSignal.map {
+            case 1    => None
+            case mult => Some(span(s"x$mult"))
+          },
+          enabledSignal = Actions.layEggActionEnabled,
+          descriptionSignal = Val(Some(div("Ants require a constant sugar supply to stay alive."))),
+          costSignal = modifiersMultiplierSignal.map(mult =>
+            ActionCost(sugar = mult * Constants.LayEggSugarCost)
+          ),
+          bonusSignal = modifiersMultiplierSignal.map(mult => ActionBonus(eggs = mult * u)),
+          onClickAction = mult => Actions.layEggAction(mult),
         )
       },
       child.maybe <-- standardBuyChamber(
@@ -512,13 +535,14 @@ object MainForm {
 
   private def actionButton(
       name: String,
-      topRightBadgeSignal: Signal[Option[ReactiveHtmlElement[HTMLElement]]],
       enabledSignal: Signal[Boolean],
       descriptionSignal: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
       costSignal: Signal[ActionCost],
       bonusSignal: Signal[ActionBonus],
-      onClickAction: () => Unit,
-  ): ReactiveHtmlElement[HTMLDivElement] =
+      onClickAction: Int => Unit,
+      topLeftBadgeSignal: Signal[Option[ReactiveHtmlElement[HTMLElement]]] = Val(None),
+      topRightBadgeSignal: Signal[Option[ReactiveHtmlElement[HTMLElement]]] = Val(None),
+  )(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
     div(
       className := "col-6 px-3 py-2 d-grid",
       button(
@@ -527,13 +551,24 @@ object MainForm {
         `type` := "button",
         name,
         disabled <-- enabledSignal.map(!_),
-        onClick --> { _ => onClickAction() },
+        onClick --> { _ =>
+          useSignalValue[Int](modifiersMultiplierSignal, mult => onClickAction(mult))
+        },
+        child.maybe <--
+          topLeftBadgeSignal.map {
+            _.map { elem =>
+              span(
+                className := "position-absolute top-0 start-0 translate-middle badge rounded-pill bg-secondary",
+                elem,
+              )
+            }
+          },
         child.maybe <--
           topRightBadgeSignal.map {
-            _.map { level =>
+            _.map { elem =>
               span(
                 className := "position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary",
-                level,
+                elem,
               )
             }
           },
@@ -667,7 +702,7 @@ object MainForm {
     ).amendThis(elem => setTooltip(elem, tooltipSignal))
   }
 
-  private def upgradesDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+  private def upgradesDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def createUpgrade(
         upgradeType: UpgradeType,
         unlockFunc: UpgradesData => UpgradesData = identity,
@@ -677,14 +712,14 @@ object MainForm {
       ifUpgradeReadyToBuyOpt(upgradeSignal) {
         actionButton(
           name = upgradeType.name,
-          costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
-          hasResourcesSignal(costSignal),
-          Val(Some(div(upgradeType.description))),
-          costSignal,
-          Val(ActionBonus.empty),
-          () =>
+          topRightBadgeSignal =
+            costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
+          enabledSignal = hasResourcesSignal(costSignal),
+          descriptionSignal = Val(Some(div(upgradeType.description))),
+          costSignal = costSignal,
+          bonusSignal = Val(ActionBonus.empty),
+          onClickAction = _ =>
             useSignalValue[ActionCost](
-              owner,
               costSignal,
               actionCost =>
                 Actions.unlockUpgrade(actionCost, _.unlock(upgradeType).pipe(unlockFunc)),
@@ -704,7 +739,7 @@ object MainForm {
     )
   }
 
-  private def exploreDiv(owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
+  private def exploreDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def createExploreArea(
         name: String,
         unlockFunc: Signal[Boolean],
@@ -714,17 +749,15 @@ object MainForm {
       ifUnlockedOpt(unlockFunc) {
         actionButton(
           name = name,
-          Val(None),
-          hasResourcesSignal(costSignal).combineWith(explorationSignal).map {
+          enabledSignal = hasResourcesSignal(costSignal).combineWith(explorationSignal).map {
             case (hasResources, exploration) =>
               hasResources && exploration.explorationParties.sizeIs < Constants.MaxExplorationParties
           },
-          description,
-          costSignal,
-          Val(ActionBonus.empty),
-          () =>
+          descriptionSignal = description,
+          costSignal = costSignal,
+          bonusSignal = Val(ActionBonus.empty),
+          onClickAction = _ =>
             useSignalValue[ActionCost](
-              owner,
               costSignal,
               actionCost => Actions.explore(actionCost),
             ),
