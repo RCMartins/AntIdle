@@ -711,7 +711,7 @@ object MainForm {
       val upgradeSignal: Signal[UpgradeData] = upgradesSignal.map(_(upgradeType))
       ifUpgradeReadyToBuyOpt(upgradeSignal) {
         actionButton(
-          name = upgradeType.name,
+          name = upgradeType.title,
           topRightBadgeSignal =
             costSignal.map(actionCost => Some(prettyNumberSimple(actionCost.colonyPoints))),
           enabledSignal = hasResourcesSignal(costSignal),
