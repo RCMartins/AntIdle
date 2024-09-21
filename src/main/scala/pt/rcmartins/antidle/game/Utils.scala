@@ -4,6 +4,7 @@ import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model._
 
 import scala.annotation.tailrec
@@ -105,11 +106,16 @@ object Utils {
     initializeTicksUpdater(owner)
     initializeActionUpdater(owner)
     addMessage("We should collect some sugar to feed our queen.")
+    pause = true
     setInterval(200)(updateState())
     actionUpdater.writer.onNext(
       _.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner))
         .tap(allData => lastSavedTick.set(allData.world.currentTick))
     )
+    SaveLoad.loadFromLocalStorage() match {
+      case Some(allData) => SaveLoad.reloadDataFromLoadedSave(allData, messageAlert = None)
+      case None          => pause = false
+    }
   }
 
   def addMessage(message: String): Unit =
