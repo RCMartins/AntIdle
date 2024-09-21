@@ -4,13 +4,15 @@ import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
-import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask, ExplorationParty}
+import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask}
 
 import scala.util.chaining.scalaUtilChainingOps
 
 object TickUpdater {
 
   def updateAllData(initial: AllData, nextSaveTickOpt: Option[Long]): AllData = {
+    var surplusSugarU = 0L
+
     val updates: Seq[AllData => AllData] =
       Seq[AllData => AllData](
         // Tick update
@@ -62,11 +64,19 @@ object TickUpdater {
               (if (allData.upgrades(ImproveSugarCollectorTask2).unlocked) 1.15 else 1.0) *
               (if (allData.upgrades(ImproveSugarCollectorTask3).unlocked) 1.15 else 1.0)
 
-          allData
-            .giveResources(
-              sugar =
-                (sugarWorkers * Constants.defaultTaskCollectSugarTick * sugarBonusMultiplier).toLong,
+          val totalSugarToGain: Long =
+            (sugarWorkers * Constants.defaultTaskCollectSugarTick * sugarBonusMultiplier).toLong
+
+          val sugarToGive: Long =
+            Math.min(
+              allData.nestAttributes.maxSugar - allData.basicResources.sugar,
+              totalSugarToGain,
             )
+
+          surplusSugarU += totalSugarToGain - sugarToGive
+
+          allData
+            .giveResources(sugar = sugarToGive)
             .modify(_.nestAttributes.buildQueue)
             .setToIf(buildWorkers > 0)(updatedBuildQueue)
             .pipe { allData =>
@@ -122,11 +132,20 @@ object TickUpdater {
         // Sugar upkeep + death ants by starving (should be the last data update)
         allData => {
           val sugarUpkeep = allData.ants.upkeepWorkersCount * Constants.antsSugarUpkeepTick
-          val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
+          val sugarRemaining =
+            Math.min(
+              allData.nestAttributes.maxSugar,
+              allData.basicResources.sugar + surplusSugarU - sugarUpkeep,
+            )
+
+          val sugarUsedFromSurplus: Long =
+            Math.min(sugarUpkeep, surplusSugarU)
 
           allData
             .modify(_.basicResources.sugar)
             .setTo(Math.max(0, sugarRemaining))
+            .modify(_.statistics.sugarU)
+            .usingIf(sugarUsedFromSurplus > 0)(_.addValue(sugarUsedFromSurplus))
             .pipe { allData =>
               if (sugarRemaining >= 0)
                 allData
