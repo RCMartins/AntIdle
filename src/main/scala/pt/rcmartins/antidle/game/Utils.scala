@@ -184,7 +184,7 @@ object Utils {
               else
                 loop(ticksLeft - 1, TickUpdater.updateAllData(allData, nextSaveTick))
 
-            loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
+            loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUpMult), allData).updateVars()
           }
       }
   }

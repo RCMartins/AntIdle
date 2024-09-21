@@ -66,14 +66,16 @@ object MainForm {
 
   private val ResourcesWidth = 500
   private val NestWidth = 800
-  private val MessagesWidth = 500
+  private val MessagesWidth = 575
 
   private val windowWidthVar: Var[Long] = Var(1000)
   private val windowWidthLimit: Long =
     ResourcesWidth + NestWidth + MessagesWidth
 
   def apply(): ReactiveHtmlElement[HTMLDivElement] = {
-    val owner = new OneTimeOwner(() => println("MainForm owner is being called after dispose"))
+    implicit val owner: Owner = new OneTimeOwner(() =>
+      println("MainForm owner is being called after dispose")
+    )
 
     dom.window.addEventListener(
       "resize",
@@ -96,135 +98,20 @@ object MainForm {
     }
 
     div(
-      className := "m-2",
-      className := "d-flex justify-content-start",
-      className := "fs-4",
-      className("flex-column") <-- windowWidthVar.signal.map(_ < windowWidthLimit),
+      topBarDiv,
       div(
-        resourcesDiv,
-      ),
-      div(
-        className := "card m-1",
-        width.px := NestWidth,
-        maxWidth.px := NestWidth,
+        className := "m-2",
+        className := "d-flex justify-content-start",
+        className := "fs-4",
+        className("flex-column") <-- windowWidthVar.signal.map(_ < windowWidthLimit),
         div(
-          className := "card-header",
-          ul(
-            className := "nav nav-tabs card-tabs",
-            role := "tablist",
-            li(
-              className := "nav-item",
-              a(
-                className := "nav-link active",
-                idAttr := "nest-tab",
-                dataAttr("bs-toggle") := "tab",
-                href := "#nestContent",
-                role := "tab",
-                "Nest"
-              )
-            ),
-            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
-              li(
-                className := "nav-item",
-                a(
-                  className := "nav-link",
-                  idAttr := "tasks-tab",
-                  dataAttr("bs-toggle") := "tab",
-                  href := "#tasksContent",
-                  role := "tab",
-                  "Tasks",
-                  child <-- idleWorkersCountSignal.map {
-                    case 0 => span()
-                    case n => span(s" (", prettyNumberInt(n), ")")
-                  },
-                )
-              )
-            ),
-            child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
-              li(
-                className := "nav-item",
-                a(
-                  className := "nav-link",
-                  idAttr := "upgrades-tab",
-                  dataAttr("bs-toggle") := "tab",
-                  href := "#upgradesContent",
-                  role := "tab",
-                  "Upgrades",
-                )
-              )
-            ),
-            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
-              li(
-                className := "nav-item",
-                a(
-                  className := "nav-link",
-                  idAttr := "upgrades-tab",
-                  dataAttr("bs-toggle") := "tab",
-                  href := "#exploreContent",
-                  role := "tab",
-                  "Explore",
-                )
-              )
-            ),
-            li(
-              className := "nav-item",
-              a(
-                className := "nav-link",
-                idAttr := "settings-tab",
-                dataAttr("bs-toggle") := "tab",
-                href := "#settingsContent",
-                role := "tab",
-                "Settings"
-              )
-            ),
-          )
+          resourcesDiv,
         ),
+        mainTabsDiv,
         div(
-          className := "card-body",
-          div(
-            className := "tab-content",
-            div(
-              className := "tab-pane show active",
-              idAttr := "nestContent",
-              role := "tabpanel",
-              nestDiv(owner),
-            ),
-            child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
-              div(
-                className := "tab-pane",
-                idAttr := "tasksContent",
-                role := "tabpanel",
-                tasksDiv,
-              )
-            ),
-            child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
-              div(
-                className := "tab-pane",
-                idAttr := "upgradesContent",
-                role := "tabpanel",
-                upgradesDiv(owner),
-              )
-            ),
-            child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
-              div(
-                className := "tab-pane",
-                idAttr := "exploreContent",
-                role := "tabpanel",
-                exploreDiv(owner),
-              )
-            ),
-            div(
-              className := "tab-pane",
-              idAttr := "settingsContent",
-              role := "tabpanel",
-              settingsDiv,
-            ),
-          )
-        )
-      ),
-      div(
-        child.maybe <-- ifUnlockedOpt(buildQueueUnlockedSignal)(buildQueueDiv),
-        messagesDiv,
+          child.maybe <-- ifUnlockedOpt(buildQueueUnlockedSignal)(buildQueueDiv),
+          messagesDiv,
+        ),
       ),
       onMouseMove --> (ev => {
         Var.set(
@@ -252,6 +139,166 @@ object MainForm {
       UIUtils.createShowGlobalAlertsDiv(),
     )
   }
+
+  private def topBarDiv: ReactiveHtmlElement[HTMLDivElement] =
+    div(
+      className := "flex-column",
+      div(
+        className := "m-2",
+        div(
+          className := "w-100",
+          height.px := 26,
+          className := "d-flex justify-content-between",
+          div(
+            "Ant Idle"
+          ),
+          div(
+            timeDiv
+          ),
+          div(
+            nbsp
+          ),
+        ),
+      ),
+      // horizontal line
+      hr(
+        className := "w-100",
+        className := "m-0",
+      ),
+    )
+
+  private def timeDiv: ReactiveHtmlElement[HTMLDivElement] =
+    div(
+      child <--
+        currentTickSignal.map { currentTick =>
+          val years = currentTick / TicksPerYear
+          val season: Int = ((currentTick - TicksPerYear * years) / TicksPerSeason).toInt
+          val day = (currentTick % TicksPerSeason) / TicksPerDay
+
+          span("Year ", years, " - ", Constants.seasonStr(season), ", day ", day + 1)
+        }
+    )
+
+  private def mainTabsDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
+    div(
+      className := "card m-1",
+      width.px := NestWidth,
+      maxWidth.px := NestWidth,
+      div(
+        className := "card-header",
+        ul(
+          className := "nav nav-tabs card-tabs",
+          role := "tablist",
+          li(
+            className := "nav-item",
+            a(
+              className := "nav-link active",
+              idAttr := "nest-tab",
+              dataAttr("bs-toggle") := "tab",
+              href := "#nestContent",
+              role := "tab",
+              "Nest"
+            )
+          ),
+          child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+            li(
+              className := "nav-item",
+              a(
+                className := "nav-link",
+                idAttr := "tasks-tab",
+                dataAttr("bs-toggle") := "tab",
+                href := "#tasksContent",
+                role := "tab",
+                "Tasks",
+                child <-- idleWorkersCountSignal.map {
+                  case 0 => span()
+                  case n => span(s" (", prettyNumberInt(n), ")")
+                },
+              )
+            )
+          ),
+          child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
+            li(
+              className := "nav-item",
+              a(
+                className := "nav-link",
+                idAttr := "upgrades-tab",
+                dataAttr("bs-toggle") := "tab",
+                href := "#upgradesContent",
+                role := "tab",
+                "Upgrades",
+              )
+            )
+          ),
+          child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+            li(
+              className := "nav-item",
+              a(
+                className := "nav-link",
+                idAttr := "upgrades-tab",
+                dataAttr("bs-toggle") := "tab",
+                href := "#exploreContent",
+                role := "tab",
+                "Explore",
+              )
+            )
+          ),
+          li(
+            className := "nav-item",
+            a(
+              className := "nav-link",
+              idAttr := "settings-tab",
+              dataAttr("bs-toggle") := "tab",
+              href := "#settingsContent",
+              role := "tab",
+              "Settings"
+            )
+          ),
+        )
+      ),
+      div(
+        className := "card-body",
+        div(
+          className := "tab-content",
+          div(
+            className := "tab-pane show active",
+            idAttr := "nestContent",
+            role := "tabpanel",
+            nestDiv,
+          ),
+          child.maybe <-- ifUnlockedOpt(antTasksUnlockedSignal)(
+            div(
+              className := "tab-pane",
+              idAttr := "tasksContent",
+              role := "tabpanel",
+              tasksDiv,
+            )
+          ),
+          child.maybe <-- ifUnlockedOpt(upgradesTabUnlockedSignal)(
+            div(
+              className := "tab-pane",
+              idAttr := "upgradesContent",
+              role := "tabpanel",
+              upgradesDiv,
+            )
+          ),
+          child.maybe <-- ifUnlockedOpt(exploreTabUnlockedSignal)(
+            div(
+              className := "tab-pane",
+              idAttr := "exploreContent",
+              role := "tabpanel",
+              exploreDiv,
+            )
+          ),
+          div(
+            className := "tab-pane",
+            idAttr := "settingsContent",
+            role := "tabpanel",
+            settingsDiv,
+          ),
+        )
+      )
+    )
 
   private def settingsDiv: ReactiveHtmlElement[HTMLDivElement] = {
     def settingsButton(
