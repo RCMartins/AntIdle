@@ -2,6 +2,7 @@ package pt.rcmartins.antidle.game
 
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.game.saves.SaveLoad
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask, ExplorationParty}
 
@@ -9,10 +10,12 @@ import scala.util.chaining.scalaUtilChainingOps
 
 object TickUpdater {
 
-  def updateAllData(initial: AllData): AllData = {
+  def updateAllData(initial: AllData, nextSaveTickOpt: Option[Long]): AllData = {
     val updates: Seq[AllData => AllData] =
       Seq[AllData => AllData](
+        // Tick update
         allData => allData.modify(_.world.currentTick).using(_ + 1),
+        // Eggs -> Ants update
         allData => {
           val updatedEggsAndLarvae: Seq[Either[Unit, AntBrood]] =
             allData.ants.eggsAndLarvae.map {
@@ -32,6 +35,7 @@ object TickUpdater {
             .modify(_.statistics.maxAliveWorkers)
             .usingIf(newWorkers > 0)(_.max(allData.ants.workersCount + (newWorkers / u).toInt))
         },
+        // Ants income from tasks + build queue
         allData => {
           def countWorkers(task: AntTask): Long =
             allData.ants.tasks.find(_._1 == task).map(_._2 / u).getOrElse(0L)
@@ -93,6 +97,7 @@ object TickUpdater {
               }
             }
         },
+        // Colony points update
         allData => {
           allData.giveResources(
             colonyPoints = allData.nestAttributes.chambers.nestChamber.level *
@@ -100,6 +105,7 @@ object TickUpdater {
               Constants.defaultNestLevelColonyPointsTick,
           )
         },
+        // Exploration parties update
         allData => {
           val (updatedExplorationParties, finishedParties) =
             allData.exploration.explorationParties.partition(_.targetTick > allData.currentTick)
@@ -113,7 +119,7 @@ object TickUpdater {
               }
             }
         },
-        // This update should always be the last, so that all the resources are updated before the sugar upkeep
+        // Sugar upkeep + death ants by starving (should be the last data update)
         allData => {
           val sugarUpkeep = allData.ants.upkeepWorkersCount * Constants.antsSugarUpkeepTick
           val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
@@ -159,7 +165,17 @@ object TickUpdater {
                       allData
                   }
             }
-        }
+        },
+        // This is the last step to save data if necessary
+        allData => {
+          nextSaveTickOpt.foreach {
+            case nextSaveTick if allData.currentTick >= nextSaveTick =>
+              SaveLoad.saveToLocalStorage(allData)
+              Utils.lastSavedTick.set(allData.currentTick)
+            case _ =>
+          }
+          allData
+        },
       )
 
     updates.foldLeft(initial) { case (allData, update) => update(allData) }

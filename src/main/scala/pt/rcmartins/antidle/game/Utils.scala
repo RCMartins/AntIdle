@@ -15,6 +15,16 @@ object Utils {
   var pause: Boolean = false
   val unlocksOwner: SubscriptionManager = new SubscriptionManager
 
+  private val defaultMode: Int = 30
+  val allSaveModes: Seq[Int] = Seq(0, defaultMode, 60, 180)
+  val autoSaveMode: Var[Int] = Var(defaultMode)
+  val lastSavedTick: Var[Long] = Var(0L)
+  private val nextSaveTickSignal: Signal[Option[Long]] =
+    lastSavedTick.signal.combineWith(autoSaveMode).map {
+      case (_, 0)            => None
+      case (lastSaved, mode) => Some(lastSaved + mode * Constants.TicksPerSecond)
+    }
+
   val worldData: Var[WorldData] = Var(AllData.initial.world)
   val antsData: Var[AntsData] = Var(AllData.initial.ants)
   val antsSignal: Signal[AntsData] = antsData.signal
@@ -96,7 +106,10 @@ object Utils {
     initializeActionUpdater(owner)
     addMessage("We should collect some sugar to feed our queen.")
     setInterval(200)(updateState())
-    actionUpdater.writer.onNext(_.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner)))
+    actionUpdater.writer.onNext(
+      _.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner))
+        .tap(allData => lastSavedTick.set(allData.world.currentTick))
+    )
   }
 
   def addMessage(message: String): Unit =
@@ -135,9 +148,14 @@ object Utils {
       .sample(
         allDataSignals,
         messagesSeq,
+        nextSaveTickSignal,
       )
       .foreach {
-        case ((world, ants, basic, next, unlocks, upgrades, exploration, statistics), messages) =>
+        case (
+              (world, ants, basic, next, unlocks, upgrades, exploration, statistics),
+              messages,
+              nextSaveTick,
+            ) =>
           val ticksToUpdate = world.targetTick - world.currentTick
           if (ticksToUpdate > 0) {
             val allData =
@@ -158,7 +176,7 @@ object Utils {
               if (ticksLeft <= 0)
                 allData
               else
-                loop(ticksLeft - 1, TickUpdater.updateAllData(allData))
+                loop(ticksLeft - 1, TickUpdater.updateAllData(allData, nextSaveTick))
 
             loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
           }

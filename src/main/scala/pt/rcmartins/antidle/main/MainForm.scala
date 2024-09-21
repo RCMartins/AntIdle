@@ -273,7 +273,7 @@ object MainForm {
     div(
       className := "row",
       settingsButton(
-        "Save",
+        "Manual Save",
         () =>
           actionUpdater.writer.onNext(
             _.tap(
@@ -282,6 +282,30 @@ object MainForm {
                 .foreach(_ => currentGlobalAlert.set(Some("Game Saved!")))
             )
           )
+      ),
+      div(
+        className := "col-6 px-3 py-2 d-grid",
+        div(
+          className := "d-flex justify-content-between align-items-center",
+          "Auto-Save:",
+          children <--
+            autoSaveMode.signal.map { selectedSaveMode =>
+              allSaveModes.map { saveMode =>
+                button(
+                  className := "btn fs-4",
+                  className := (if (saveMode == selectedSaveMode) "btn-primary active"
+                                else "btn-secondary"),
+                  `type` := "button",
+                  saveMode match {
+                    case 0           => "Off"
+                    case t if t < 60 => s"${t}s"
+                    case t           => s"${t / 60}m"
+                  },
+                  onClick --> { _ => autoSaveMode.set(saveMode) }
+                )
+              }
+            },
+        ),
       ),
       settingsButton(
         "Load",

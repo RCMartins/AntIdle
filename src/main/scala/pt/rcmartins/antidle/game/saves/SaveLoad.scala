@@ -1,7 +1,7 @@
 package pt.rcmartins.antidle.game.saves
 
 import org.scalajs.dom.window.localStorage
-import pt.rcmartins.antidle.game.Utils.{actionUpdater, unlocksOwner}
+import pt.rcmartins.antidle.game.Utils.{actionUpdater, lastSavedTick, unlocksOwner}
 import pt.rcmartins.antidle.game.{UnlockUtils, Utils}
 import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
 import pt.rcmartins.antidle.model.AllData
@@ -56,6 +56,7 @@ object SaveLoad {
     unlocksOwner.killAll()
     actionUpdater.writer.onNext(_ => loadedAllData)
     actionUpdater.writer.onNext(_.tap(UnlockUtils.checkUnlocks(_)(unlocksOwner)))
+    lastSavedTick.set(loadedAllData.world.currentTick)
     Utils.pause = false
     currentGlobalAlert.set(messageAlert)
   }
