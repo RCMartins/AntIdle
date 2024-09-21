@@ -12,6 +12,7 @@ case class AllDataForSave(
     unlocks: Unlocks,
     upgrades: UpgradesDataForSave,
     exploration: ExplorationData,
+    statistics: StatisticsData,
     messages: Seq[String],
 ) {
 
@@ -25,6 +26,7 @@ case class AllDataForSave(
       unlocks = unlocks,
       upgrades = toUpgrades,
       exploration = exploration,
+      statistics = statistics,
       messages = messages,
     )
 
@@ -68,6 +70,7 @@ object AllDataForSave {
           .sortBy(_.name)
       ),
       exploration = allData.exploration,
+      statistics = allData.statistics,
       messages = allData.messages,
     )
 

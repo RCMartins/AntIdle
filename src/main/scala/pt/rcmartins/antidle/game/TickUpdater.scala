@@ -29,6 +29,8 @@ object TickUpdater {
             .setTo(updatedEggsAndLarvae.flatMap(_.toOption))
             .modify(_.ants.workers)
             .usingIf(newWorkers > 0)(_ + newWorkers)
+            .modify(_.statistics.maxAliveWorkers)
+            .usingIf(newWorkers > 0)(_.max(allData.ants.workersCount + (newWorkers / u).toInt))
         },
         allData => {
           def countWorkers(task: AntTask): Long =
@@ -113,7 +115,7 @@ object TickUpdater {
         },
         // This update should always be the last, so that all the resources are updated before the sugar upkeep
         allData => {
-          val sugarUpkeep = allData.ants.upkeepWorkersLong * Constants.antsSugarUpkeepTick
+          val sugarUpkeep = allData.ants.upkeepWorkersCount * Constants.antsSugarUpkeepTick
           val sugarRemaining = allData.basicResources.sugar - sugarUpkeep
 
           allData

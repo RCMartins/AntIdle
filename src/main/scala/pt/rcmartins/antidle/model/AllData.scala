@@ -14,6 +14,7 @@ case class AllData(
     unlocks: Unlocks,
     upgrades: UpgradesData,
     exploration: ExplorationData,
+    statistics: StatisticsData,
     messages: Seq[String],
 ) {
 
@@ -22,12 +23,20 @@ case class AllData(
   def giveResources(
       sugar: Long = 0,
       colonyPoints: Long = 0,
-  ): AllData =
+  ): AllData = {
+    val sugarGained: Long =
+      Math.min(nestAttributes.maxSugar, basicResources.sugar + sugar) - basicResources.sugar
+
     this
       .modify(_.basicResources.sugar)
-      .usingIf(sugar > 0)(current => Math.min(current + sugar, nestAttributes.maxSugar))
+      .usingIf(sugarGained > 0)(_ + sugarGained)
+      .modify(_.statistics.sugarU)
+      .usingIf(sugarGained > 0)(_.addValue(sugarGained))
       .modify(_.basicResources.colonyPoints)
-      .usingIf(colonyPoints > 0)(_ + colonyPoints)
+      .usingIf(colonyPoints > 0)(_ + colonyPoints) // TODO change when colonyPoints are limited...
+      .modify(_.statistics.colonyPointsU)
+      .usingIf(colonyPoints > 0)(_.addValue(colonyPoints))
+  }
 
   def spendResources(actionCost: ActionCost): AllData =
     copy(
@@ -49,6 +58,7 @@ case class AllData(
       unlocksData -> unlocks,
       upgradesData -> upgrades,
       explorationData -> exploration,
+      statisticsData -> statistics,
       messagesSeq -> messages,
     )
 
@@ -72,6 +82,7 @@ object AllData {
       unlocks = Unlocks.initial,
       upgrades = UpgradesData.initial,
       exploration = ExplorationData.initial,
+      statistics = StatisticsData.initial,
       messages = Seq.empty,
     )
 
@@ -83,6 +94,7 @@ object AllData {
       unlocks: Unlocks,
       upgrades: UpgradesData,
       exploration: ExplorationData,
+      statistics: StatisticsData,
       messages: Seq[String]
   ): AllData =
     AllData(
@@ -94,6 +106,7 @@ object AllData {
       unlocks = unlocks,
       upgrades = upgrades,
       exploration = exploration,
+      statistics = statistics,
       messages = messages,
     )
 

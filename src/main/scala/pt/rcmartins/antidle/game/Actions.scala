@@ -56,6 +56,8 @@ object Actions {
         .using(_ - Constants.LayEggSugarCost * mult)
         .modify(_.ants.eggsAndLarvae)
         .using(_ ++ Seq.fill(mult)(AntBrood.Egg(allData.world.currentTick)))
+        .modify(_.statistics.eggsCount)
+        .using(_.addValue(mult))
     }
 
   def addBuildTask(buildTask: BuildTask): Unit =
@@ -139,6 +141,10 @@ object Actions {
               Constants.ExplorationTimeTicks,
             ) :: _
           )
+          .modify(_.statistics.explorationsCount)
+          .using(_.addValue(1))
+          .modify(_.statistics.explorationsWorkersSentU)
+          .using(_.addValue(actionCost.idleWorkers))
       }
 
     }

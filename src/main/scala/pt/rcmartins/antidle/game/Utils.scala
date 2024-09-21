@@ -29,6 +29,7 @@ object Utils {
   val upgradesSignal: Signal[UpgradesData] = upgradesData.signal.distinct
   val explorationData: Var[ExplorationData] = Var(AllData.initial.exploration)
   val explorationSignal: Signal[ExplorationData] = explorationData.signal.distinct
+  val statisticsData: Var[StatisticsData] = Var(AllData.initial.statistics)
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
 
@@ -105,6 +106,17 @@ object Utils {
     if (!pause)
       updateBus.writer.onNext(())
 
+  private val allDataSignals =
+    worldData.signal.combineWith(
+      antsData,
+      resourcesSignal,
+      nestAttributesData,
+      unlocksData,
+      upgradesData,
+      explorationData,
+      statisticsData,
+    )
+
   private def initializeTicksUpdater(implicit owner: Owner): Unit = {
     updateBus.events
       .sample(worldData)
@@ -121,49 +133,62 @@ object Utils {
 
     ticksBus.events
       .sample(
-        worldData,
-        antsData,
-        resourcesSignal,
-        nestAttributesData,
-        unlocksData,
-        upgradesData,
-        explorationData,
+        allDataSignals,
         messagesSeq,
       )
-      .foreach { case (world, ants, basic, next, unlocks, upgrades, exploration, messages) =>
-        val ticksToUpdate = world.targetTick - world.currentTick
-        if (ticksToUpdate > 0) {
-          val allData =
-            AllData.simple(world, ants, basic, next, unlocks, upgrades, exploration, messages)
+      .foreach {
+        case ((world, ants, basic, next, unlocks, upgrades, exploration, statistics), messages) =>
+          val ticksToUpdate = world.targetTick - world.currentTick
+          if (ticksToUpdate > 0) {
+            val allData =
+              AllData.simple(
+                world,
+                ants,
+                basic,
+                next,
+                unlocks,
+                upgrades,
+                exploration,
+                statistics,
+                messages,
+              )
 
-          @tailrec
-          def loop(ticksLeft: Long, allData: AllData): AllData =
-            if (ticksLeft <= 0)
-              allData
-            else
-              loop(ticksLeft - 1, TickUpdater.updateAllData(allData))
+            @tailrec
+            def loop(ticksLeft: Long, allData: AllData): AllData =
+              if (ticksLeft <= 0)
+                allData
+              else
+                loop(ticksLeft - 1, TickUpdater.updateAllData(allData))
 
-          loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
-        }
+            loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUp), allData).updateVars()
+          }
       }
   }
 
   private def initializeActionUpdater(implicit owner: Owner): Unit =
     actionUpdater.events
       .withCurrentValueOf(
-        worldData,
-        antsData,
-        resourcesSignal,
-        nestAttributesData,
-        unlocksData,
-        upgradesData,
-        explorationData,
+        allDataSignals,
         messagesSeq,
       )
       .foreach {
-        case (actionFunc, world, ants, basic, next, unlocks, upgrades, exploration, messages) =>
+        case (
+              actionFunc,
+              (world, ants, basic, next, unlocks, upgrades, exploration, statistics),
+              messages,
+            ) =>
           val allData: AllData =
-            AllData.simple(world, ants, basic, next, unlocks, upgrades, exploration, messages)
+            AllData.simple(
+              world,
+              ants,
+              basic,
+              next,
+              unlocks,
+              upgrades,
+              exploration,
+              statistics,
+              messages,
+            )
           actionFunc(allData).updateVars()
       }
 
