@@ -50,7 +50,10 @@ object Modals {
               onClick --> { _ =>
                 SaveLoad
                   .loadString(dataVar.now())
-                  .foreach(SaveLoad.reloadDataFromLoadedSave(_))
+                  .foreach { allData =>
+                    SaveLoad.reloadDataFromLoadedSave(allData)
+                    SaveLoad.saveToLocalStorage(allData)
+                  }
                 dataVar.set("")
               },
               "Import",
@@ -93,10 +96,10 @@ object Modals {
               className := "btn btn-danger",
               DataBSDismissAttr("modal"),
               onClick --> { _ =>
-                SaveLoad.reloadDataFromLoadedSave(
-                  AllData.initial.copy(world = WorldData.initial(System.currentTimeMillis())),
-                  Some("New Game Started!"),
-                )
+                val newAllData: AllData =
+                  AllData.initial.copy(world = WorldData.initial(System.currentTimeMillis()))
+                SaveLoad.reloadDataFromLoadedSave(newAllData, Some("New Game Started!"))
+                SaveLoad.saveToLocalStorage(newAllData)
                 dataVar.set("")
               },
               "Confirm",
