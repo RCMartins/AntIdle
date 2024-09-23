@@ -4,6 +4,9 @@ import zio.json._
 
 sealed trait AntBrood {
 
+  def initialTick: Long
+  def name: String
+
   def isEgg: Boolean
   def isLarvae: Boolean
   def isPupae: Boolean
@@ -16,29 +19,32 @@ object AntBrood {
   implicit val encoder: JsonEncoder[AntBrood] = DeriveJsonEncoder.gen[AntBrood]
 
   case class Egg(
-      tickOfEgg: Long,
+      initialTick: Long,
   ) extends AntBrood {
     val isEgg: Boolean = true
     val isLarvae: Boolean = false
     val isPupae: Boolean = false
+    val name: String = "Egg"
   }
 
   case class Larvae(
-      tickOfLarvae: Long,
+      initialTick: Long,
   ) extends AntBrood {
     val isEgg: Boolean = false
     val isLarvae: Boolean = true
     val isPupae: Boolean = false
+    val name: String = "Larvae"
   }
 
   case class Pupae(
-      tickOfPupae: Long,
+      initialTick: Long,
   ) extends AntBrood {
     val isEgg: Boolean = false
     val isLarvae: Boolean = false
     val isPupae: Boolean = true
+    val name: String = "Pupae"
   }
 
-  val defaultTicksToLarva: Long = 50
+  val defaultTicksToGrow: Long = 50
 
 }

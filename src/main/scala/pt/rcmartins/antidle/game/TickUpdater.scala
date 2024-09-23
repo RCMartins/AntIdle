@@ -21,8 +21,8 @@ object TickUpdater {
         allData => {
           val updatedEggsAndLarvae: Seq[Either[Unit, AntBrood]] =
             allData.ants.eggsAndLarvae.map {
-              case AntBrood.Egg(tick)
-                  if allData.currentTick >= tick + AntBrood.defaultTicksToLarva =>
+              case AntBrood.Egg(initialTick)
+                  if allData.currentTick >= initialTick + AntBrood.defaultTicksToGrow =>
                 Left(())
               case other =>
                 Right(other)

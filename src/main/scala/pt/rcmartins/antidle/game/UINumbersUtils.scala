@@ -100,7 +100,8 @@ object UINumbersUtils {
     span((num / u).toString)
 
   def prettyTimeFromTicks(ticks: Long): String = {
-    val seconds = Math.ceil(ticks / TicksPerSecond.toDouble).toLong
+    val dSeconds = (ticks % TicksPerSecond) * 2
+    val seconds = ticks / TicksPerSecond
     val minutes = seconds / 60
     val hours = minutes / 60
     val days = hours / 24
@@ -121,7 +122,7 @@ object UINumbersUtils {
     else if (minutes > 0)
       f"$minutes minute${plural(minutes)}"
     else
-      f"$seconds second${plural(seconds)}"
+      f"$seconds.$dSeconds seconds"
   }
 
   def plural(seconds: Long): String = if (seconds != 1) "s" else ""

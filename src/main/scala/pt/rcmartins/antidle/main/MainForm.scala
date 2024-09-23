@@ -54,14 +54,28 @@ object MainForm {
 
   private def setTooltip(
       elem: ReactiveHtmlElement[HTMLDivElement],
-      contentSignal: ReactiveHtmlElement[HTMLDivElement]
+      content: ReactiveHtmlElement[HTMLDivElement],
   ): EventListener[MouseEvent, MouseEvent] =
     onMouseEnter --> { _ =>
       Var.set(
         tooltipVisible -> true,
         tooltipTarget -> elem,
-        tooltipContent -> contentSignal,
+        tooltipContent -> content,
       )
+    }
+
+  private def setTooltipOpt(
+      elem: ReactiveHtmlElement[HTMLDivElement],
+      contentOpt: Option[ReactiveHtmlElement[HTMLDivElement]],
+  ): EventListener[MouseEvent, MouseEvent] =
+    onMouseEnter --> { _ =>
+      contentOpt.foreach { content =>
+        Var.set(
+          tooltipVisible -> true,
+          tooltipTarget -> elem,
+          tooltipContent -> content,
+        )
+      }
     }
 
   private val ResourcesWidth = 500
@@ -484,7 +498,32 @@ object MainForm {
           "Eggs",
           eggsCountSignal,
           maxEggs,
-          unlocksSignal.map(_.resources.showEggs)
+          unlocksSignal.map(_.resources.showEggs),
+          tooltipOpt = Some(
+            div(
+              child <--
+                antsSignal
+                  .map(_.eggsAndLarvae)
+                  .combineWith(currentTickSignal)
+                  .map {
+                    case (Seq(), _) =>
+                      "No eggs"
+                    case (seq, currentTick) =>
+                      div(
+                        seq
+                          .map { antBlood =>
+                            div(
+                              b(antBlood.name + ": "),
+                              prettyTimeFromTicks(
+                                (antBlood.initialTick + AntBrood.defaultTicksToGrow) - currentTick
+                              ),
+                              " to grow to next stage."
+                            )
+                          }
+                      )
+                  }
+            )
+          ),
         ),
         child.maybe <-- createResourceDiv(
           "Workers",
@@ -500,6 +539,7 @@ object MainForm {
       valueSignal: Signal[Long],
       maxValueSignal: Signal[Long],
       showSignal: Signal[Boolean],
+      tooltipOpt: Option[ReactiveHtmlElement[HTMLDivElement]] = None,
   ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] =
     valueSignal.combineWith(showSignal).map {
       case (_, false) =>
@@ -511,11 +551,11 @@ object MainForm {
             div(
               className := "col-4 text-nowrap",
               name,
-            ),
+            ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-3 text-end text-nowrap",
               prettyNumberFixedSize(value),
-            ),
+            ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-2 text-start text-body-tertiary text-nowrap ps-0",
               child <--
@@ -525,7 +565,7 @@ object MainForm {
                   else
                     span("/", prettyNumberSimple(maxValue))
                 },
-            ),
+            ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-3 text-end text-nowrap",
               nbsp,
