@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.model
 
+import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.game.Constants.millsPerTick
 import zio.json._
 
@@ -17,6 +18,12 @@ case class WorldData(
     val passedTicks = delta / millsPerTick
     passedTicks
   }
+
+  // Constants.MaxTicksStored + 1 so it considers the current tick that is being processed
+  def addToTargetTick(passedTicks: Long): WorldData =
+    copy(targetTick =
+      currentTick + Math.min(Constants.MaxTicksStored + 1, (targetTick - currentTick) + passedTicks)
+    )
 
 }
 

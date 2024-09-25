@@ -14,10 +14,12 @@ object Constants {
 
   val TicksPerSecond: Int = 5
   val millsPerTick: Int = 1000 / TicksPerSecond
-  val MaxTicksCatchUpMult: Int = 10
   val TicksPerDay: Int = 10 * TicksPerSecond // 10 seconds
   val TicksPerSeason: Int = TicksPerDay * 100 // 1000 seconds (16.6 minutes)
   val TicksPerYear: Int = TicksPerSeason * 4 // 4000 seconds (66.6 minutes)
+
+  val MaxTicksCatchUpMult: Int = 2
+  val MaxTicksStored: Int = TicksPerSecond * 60 * 60 * 1 // 1 hour of stored ticks?
 
   val seasonStr: IndexedSeq[String] = IndexedSeq("Spring", "Summer", "Autumn", "Winter")
 

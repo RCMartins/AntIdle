@@ -2,8 +2,6 @@ package pt.rcmartins.antidle.model
 
 import zio.json.{DeriveJsonDecoder, DeriveJsonEncoder, JsonDecoder, JsonEncoder}
 
-import scala.util.chaining.scalaUtilChainingOps
-
 case class ExplorationParty(
     amountWorkers: Long,
     startingTick: Long,

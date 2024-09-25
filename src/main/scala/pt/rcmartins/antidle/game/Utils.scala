@@ -14,6 +14,7 @@ import scala.util.chaining.scalaUtilChainingOps
 object Utils {
 
   var pause: Boolean = false
+  val useCatchupTicksVar: Var[Boolean] = Var(false)
   val unlocksOwner: SubscriptionManager = new SubscriptionManager
 
   private val defaultMode: Int = 30
@@ -43,6 +44,7 @@ object Utils {
   val statisticsData: Var[StatisticsData] = Var(AllData.initial.statistics)
 
   val currentTickSignal: Signal[Long] = worldData.signal.map(_.currentTick).distinct
+  val targetTickSignal: Signal[Long] = worldData.signal.map(_.targetTick).distinct
 
   val workersSignal: Signal[Long] = antsSignal.map(_.workers).distinct
   val eggsCountSignal: Signal[Long] =
@@ -142,8 +144,7 @@ object Utils {
       .foreach { world =>
         val passedTicks = world.getPassedTicks(System.currentTimeMillis())
         worldData.update(
-          _.modify(_.targetTick)
-            .using(_ + passedTicks)
+          _.addToTargetTick(passedTicks)
             .modify(_.lastUpdateTime)
             .using(_ + Constants.millsPerTick * passedTicks)
         )
@@ -155,12 +156,14 @@ object Utils {
         allDataSignals,
         messagesSeq,
         nextSaveTickSignal,
+        useCatchupTicksVar,
       )
       .foreach {
         case (
               (world, ants, basic, next, unlocks, upgrades, exploration, statistics),
               messages,
               nextSaveTick,
+              useCatchupTicks,
             ) =>
           val ticksToUpdate = world.targetTick - world.currentTick
           if (ticksToUpdate > 0) {
@@ -184,7 +187,13 @@ object Utils {
               else
                 loop(ticksLeft - 1, TickUpdater.updateAllData(allData, nextSaveTick))
 
-            loop(Math.min(ticksToUpdate, Constants.MaxTicksCatchUpMult), allData).updateVars()
+            val ticksToCatchUp: Long =
+              if (useCatchupTicks)
+                Math.min(ticksToUpdate, Constants.MaxTicksCatchUpMult)
+              else
+                1
+
+            loop(ticksToCatchUp, allData).updateVars()
           }
       }
   }

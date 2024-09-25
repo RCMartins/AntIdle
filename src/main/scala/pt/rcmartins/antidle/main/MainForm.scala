@@ -162,19 +162,24 @@ object MainForm {
         div(
           className := "w-100",
           height.px := 26,
-          className := "d-flex justify-content-between",
+          className := "d-flex justify-content-between align-items-center",
           div(
             "Ant Idle"
           ),
           div(
-            timeDiv
+            className := "d-flex justify-content-between align-items-center",
+            timeDiv,
+            div(
+              width.px := 75,
+              nbsp,
+            ),
+            catchUpDiv,
           ),
           div(
             nbsp
           ),
         ),
       ),
-      // horizontal line
       hr(
         className := "w-100",
         className := "m-0",
@@ -192,6 +197,43 @@ object MainForm {
           span("Year ", years, " - ", Constants.seasonStr(season), ", day ", day + 1)
         }
     )
+
+  private def catchUpDiv: ReactiveHtmlElement[HTMLDivElement] = {
+    val isBehind: Signal[Boolean] =
+      currentTickSignal
+        .combineWith(targetTickSignal)
+        .map { case (currentTick, targetTick) =>
+          targetTick - currentTick > 0
+        }
+        .distinct
+
+    div(
+      child <--
+        isBehind.map {
+          case false =>
+            span()
+          case true =>
+            span(
+              "Catch up: [",
+              child.text <--
+                currentTickSignal.combineWith(targetTickSignal).map {
+                  case (currentTick, targetTick) => prettyTimeFromTicks(targetTick - currentTick)
+                },
+              "] ",
+              button(
+                className := "btn btn-sm py-0",
+                className("btn-success active") <-- Utils.useCatchupTicksVar,
+                className("btn-secondary") <-- Utils.useCatchupTicksVar.signal.map(!_),
+                `type` := "button",
+                child.text <-- Utils.useCatchupTicksVar.signal.map(if (_) "On" else "Off"),
+                onClick --> { _ =>
+                  Utils.useCatchupTicksVar.update(!_)
+                }
+              )
+            )
+        }
+    )
+  }
 
   private def mainTabsDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] =
     div(
