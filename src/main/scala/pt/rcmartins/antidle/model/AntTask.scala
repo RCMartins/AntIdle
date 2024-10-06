@@ -25,7 +25,7 @@ object AntTask {
     val uiOrder: Int = 2
   }
 
-  case object NestBuilder extends AntTask {
+  case object Tunneler extends AntTask {
     val uiOrder: Int = 3
   }
 

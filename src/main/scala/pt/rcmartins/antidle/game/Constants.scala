@@ -42,16 +42,16 @@ object Constants {
 
   val PlayerGatherSugarClickAmount: Long = 1 * u
   val (defaultTaskCollectSugarTick: Long, defaultTaskCollectSugarSecond: Long) =
-    tickAndSeconds((0.4 * u).toLong)
+    tickAndSeconds(perSecondValue = (0.4 * u).toLong)
 
-  val (defaultTaskBuildPowerTick: Long, defaultTaskBuildPowerSecond: Long) =
-    tickAndSeconds((1.0 * u).toLong)
+  val (defaultTaskTunnelingSpaceTick: Long, defaultTaskTunnelingSpaceSecond: Long) =
+    tickAndSeconds(perSecondValue = (1.0 * u).toLong)
 
   val (defaultNestLevelColonyPointsTick: Long, defaultNestLevelColonyPointsSecond: Long) =
-    tickAndSeconds((0.01 * u).toLong)
+    tickAndSeconds(perSecondValue = (0.01 * u).toLong)
 
   val (antsSugarUpkeepTick: Long, antsSugarUpkeepSecond: Long) =
-    tickAndSeconds((0.2 * u).toLong)
+    tickAndSeconds(perSecondValue = (0.2 * u).toLong)
 
   val NestUpgradeBonusMaxWorkers: Long = 5 * u
   val QueenChamberBonusMaxEggs: Long = 2 * u
@@ -59,12 +59,10 @@ object Constants {
 
   val AntDeathRiskThreshold: Long = 10 * u
 
-  val NestUpgradeName = "Expand Nest"
-  val QueenChamberName = "Queen's Chamber"
-  val StorageChamberName = "Food Storage Chamber"
-  val NurseryChamberName = "Nursery Chamber"
+  val GatherSugarAction = "Gather Sugar"
+  val LayEggAction = "Lay Egg"
 
-  def getChamberBuildPower(chamberType: ChamberType, level: Int): Long = {
+  def getChamberTunnelingSpaceNeeded(chamberType: ChamberType, level: Int): Long = {
     def cost(base: Long, multiplier: IndexedSeq[Double]): Long =
       (base * multiplier(level)).toLong
 

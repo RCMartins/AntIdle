@@ -48,7 +48,7 @@ object Actions {
       val mult: Int =
         Math.min(
           Math.min(maxMultiplierUsed, maxEggs),
-          (allData.basicResources.sugar / Constants.LayEggSugarCost).toInt,
+          (allData.basicResources.sugar.amount / Constants.LayEggSugarCost).toInt,
         )
 
       allData
@@ -62,9 +62,12 @@ object Actions {
 
   def addBuildTask(buildTask: BuildTask): Unit =
     actionUpdater.writer.onNext { allData =>
-      allData
-        .modify(_.nestAttributes.buildQueue)
-        .using(_ :+ buildTask)
+      if (allData.nestAttributes.buildQueue.sizeIs < allData.nestAttributes.maxBuildQueue)
+        allData
+          .modify(_.nestAttributes.buildQueue)
+          .using(_ :+ buildTask)
+      else
+        allData
     }
 
   def unlockUpgrade(actionCost: ActionCost, unlockAction: UpgradesData => UpgradesData): Unit =
@@ -75,13 +78,6 @@ object Actions {
         .using(unlockAction)
     }
 
-  val buildChamberBuyEnabled: Signal[Boolean] =
-    buildQueueSignal
-      .combineWith(maxBuildQueueSignal)
-      .map { case (buildQueue, maxBuildQueue) =>
-        buildQueue.size < maxBuildQueue
-      }
-
   def getChamber(chamberType: ChamberType): Signal[Chamber] =
     chambersSignal.map { chambers =>
       chamberType match {
@@ -90,14 +86,6 @@ object Actions {
         case ChamberType.FoodStorage => chambers.foodStorageChamber
         case ChamberType.Nursery     => chambers.nurseryChamber
       }
-    }
-
-  def getBuildTask(chamberType: ChamberType, buildPower: Long): BuildTask =
-    chamberType match {
-      case ChamberType.Nest        => BuildTask.NestUpgrade(buildPower)
-      case ChamberType.Queen       => BuildTask.QueenChamber(buildPower)
-      case ChamberType.FoodStorage => BuildTask.FoodStorageChamber(buildPower)
-      case ChamberType.Nursery     => BuildTask.NurseryChamber(buildPower)
     }
 
   def getActionBonus(chamberType: ChamberType): Signal[ActionBonus] =
@@ -125,11 +113,11 @@ object Actions {
     getChamber(chamberType)
       .map(_.level)
       .distinct
-      .map(level => ActionCost(buildPower = getChamberBuildPower(chamberType, level)))
+      .map(level => ActionCost(tunnelingSpace = getChamberTunnelingSpaceNeeded(chamberType, level)))
 
   def explore(actionCost: ActionCost): Unit =
     actionUpdater.writer.onNext {
-      _.purchaseIfPossible(actionCost) { allData =>
+      _.hasResourcesUpdate(actionCost) { allData =>
         allData
           .modify(_.ants)
           .using(_.addToTask(AntTask.Explorer, actionCost.idleWorkers))

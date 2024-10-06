@@ -9,21 +9,38 @@ sealed trait Chamber {
 
   def chamberType: ChamberType
 
+  def name: String = chamberType.name
+
 }
 
 object Chamber {
 
-  sealed trait ChamberType
+  sealed trait ChamberType {
+
+    def name: String
+
+  }
 
   object ChamberType {
 
-    case object Nest extends ChamberType
+    implicit val decoder: JsonDecoder[ChamberType] = DeriveJsonDecoder.gen[ChamberType]
+    implicit val encoder: JsonEncoder[ChamberType] = DeriveJsonEncoder.gen[ChamberType]
 
-    case object Queen extends ChamberType
+    case object Nest extends ChamberType {
+      val name: String = "Expand Nest"
+    }
 
-    case object FoodStorage extends ChamberType
+    case object Queen extends ChamberType {
+      val name: String = "Queen's Chamber"
+    }
 
-    case object Nursery extends ChamberType
+    case object FoodStorage extends ChamberType {
+      val name: String = "Food Storage Chamber"
+    }
+
+    case object Nursery extends ChamberType {
+      val name: String = "Nursery Chamber"
+    }
 
   }
 
