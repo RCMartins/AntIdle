@@ -5,6 +5,7 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.Utils._
+import pt.rcmartins.antidle.model.BasicResources.BasicResource
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model._
 
@@ -13,7 +14,7 @@ import scala.util.chaining.scalaUtilChainingOps
 object UnlockUtils {
 
   def checkUnlocks(initialAllData: AllData)(implicit owner: SubscriptionManager): Unit = {
-    unlockSubscription[Long](
+    unlockSubscription[BasicResource](
       sugarSignal,
       _ >= 5 * u,
       _ =>
@@ -65,14 +66,26 @@ object UnlockUtils {
       _ => {
         Var.update(
           unlocksData -> ((_: Unlocks).modify(_.tabs.buildQueueUnlocked).setTo(true)),
-          antsData -> ((_: AntsData).unlockTask(AntTask.NestBuilder)),
+          antsData -> ((_: AntsData).unlockTask(AntTask.Tunneler)),
         )
-        addMessage("Assign some of our ants as builders.")
+        addMessage("Assign some of our ants as tunnelers.")
       },
       initialAllData.unlocks.tabs.buildQueueUnlocked,
     )
 
-    unlockSubscription[Long](
+    unlockSubscription[BasicResource](
+      tunnelingSpaceSignal,
+      _ > 0,
+      _ => {
+        Var.update(
+          unlocksData -> ((_: Unlocks).modifyAll(_.resources.showTunnelingSpace).setTo(true)),
+        )
+        addMessage("Tunneling Space is the main resource needed to build new chambers.")
+      },
+      initialAllData.unlocks.resources.showTunnelingSpace,
+    )
+
+    unlockSubscription[BasicResource](
       colonyPointsSignal,
       _ > 0,
       _ => {

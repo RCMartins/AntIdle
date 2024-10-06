@@ -43,8 +43,11 @@ object Unlocks {
   }
 
   case class ResourceUnlocks(
-      showEggs: Boolean = false,
+      // Resources
+      showTunnelingSpace: Boolean = false,
       showColonyPoints: Boolean = false,
+      // Ants
+      showEggs: Boolean = false,
       showWorkers: Boolean = false,
   )
 

@@ -5,6 +5,7 @@ import com.raquo.laminar.api.L.{u => _, _}
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.saves.SaveLoad
+import pt.rcmartins.antidle.model.BasicResources.BasicResource
 import pt.rcmartins.antidle.model._
 
 import scala.annotation.tailrec
@@ -69,23 +70,27 @@ object Utils {
 
   val idleWorkersCountSignal: Signal[Long] = antsData.signal.map(_.idleWorkersCount).distinct
 
-  val sugarSignal: Signal[Long] = resourcesSignal.map(_.sugar).distinct
-  val proteinsSignal: Signal[Long] = resourcesSignal.map(_.proteins).distinct
-  val waterSignal: Signal[Long] = resourcesSignal.map(_.water).distinct
-  val colonyPointsSignal: Signal[Long] = resourcesSignal.map(_.colonyPoints).distinct
-  val DNASignal: Signal[Long] = resourcesSignal.map(_.DNA).distinct
+  val sugarSignal: Signal[BasicResource] = resourcesSignal.map(_.sugar).distinct
+//  val proteinsSignal: Signal[BasicResource] = resourcesSignal.map(_.proteins).distinct
+//  val waterSignal: Signal[BasicResource] = resourcesSignal.map(_.water).distinct
+  val tunnelingSpaceSignal: Signal[BasicResource] = resourcesSignal.map(_.tunnelingSpace).distinct
+  val colonyPointsSignal: Signal[BasicResource] = resourcesSignal.map(_.colonyPoints).distinct
+//  val DNASignal: Signal[BasicResource] = resourcesSignal.map(_.DNA).distinct
 
-  val maxSugar: Signal[Long] = nestAttributesData.signal.map(_.maxSugar).distinct
   val maxEggs: Signal[Long] = nestAttributesData.signal.map(_.maxEggs).distinct
   val maxWorkers: Signal[Long] = nestAttributesData.signal.map(_.maxWorkers).distinct
 
-  val buildQueueSignal: Signal[Seq[BuildTask]] = nestSignal.map(_.buildQueue).distinct
+  val buildQueueSignal: Signal[List[BuildTask]] = nestSignal.map(_.buildQueue).distinct
   val maxBuildQueueSignal: Signal[Int] = nestSignal.map(_.maxBuildQueue).distinct
 
   val messagesSeq: Var[Seq[String]] = Var(Seq.empty)
   val messagesSignal: Signal[Seq[String]] = messagesSeq.signal.distinct
 
-//  val lastMessage: Signal[Option[String]] = messagesSeq.signal.map(_.headOption)
+  val eggResourceSignal: Signal[BasicResource] =
+    eggsCountSignal.combineWith(maxEggs).map { case (amount, max) => BasicResource(amount, max) }
+
+  val workersResourceSignal: Signal[BasicResource] =
+    workersSignal.combineWith(maxWorkers).map { case (amount, max) => BasicResource(amount, max) }
 
   val antTasksUnlockedSignal: Signal[Boolean] =
     unlocksSignal.map(_.tabs.antTasksUnlocked).distinct

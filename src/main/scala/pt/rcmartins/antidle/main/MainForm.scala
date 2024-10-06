@@ -13,6 +13,7 @@ import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
 import pt.rcmartins.antidle.game._
 import pt.rcmartins.antidle.game.saves.SaveLoad
+import pt.rcmartins.antidle.model.BasicResources.BasicResource
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.Unlocks.ActionUnlocks
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
@@ -26,8 +27,8 @@ object MainForm {
 
   val currentGlobalAlert: Var[Option[String]] = Var(None)
 
-  private val tooltipContent: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
-  private val tooltipTarget: Var[ReactiveHtmlElement[HTMLDivElement]] = Var(div())
+  private val tooltipContent: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
+  private val tooltipTarget: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
   private val tooltipVisible: Var[Boolean] = Var(false)
   private val tooltipX: Var[Int] = Var(0)
   private val tooltipY: Var[Int] = Var(0)
@@ -53,8 +54,8 @@ object MainForm {
       }
 
   private def setTooltip(
-      elem: ReactiveHtmlElement[HTMLDivElement],
-      content: ReactiveHtmlElement[HTMLDivElement],
+      elem: ReactiveHtmlElement[HTMLElement],
+      content: ReactiveHtmlElement[HTMLElement],
   ): EventListener[MouseEvent, MouseEvent] =
     onMouseEnter --> { _ =>
       Var.set(
@@ -450,14 +451,19 @@ object MainForm {
 
   private def buildQueueDiv: ReactiveHtmlElement[HTMLDivElement] = {
     def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] = {
-      val name: String =
-        buildTask match {
-          case _: BuildTask.NestUpgrade        => Constants.NestUpgradeName
-          case _: BuildTask.QueenChamber       => Constants.QueenChamberName
-          case _: BuildTask.FoodStorageChamber => Constants.StorageChamberName
-          case _: BuildTask.NurseryChamber     => Constants.NurseryChamberName
-        }
-      span(name, " [", prettyNumberSimple(buildTask.buildPowerRequired), "]")
+      span(
+        buildTask.chamberType.name,
+        " [",
+        "???", // TODO calculateTicksToResources(buildTask.actionCost).map(prettyTimeFromTicks),
+        "]",
+      ).amendThis(elem =>
+        createTooltipForActionButton(
+          elem = elem,
+          descriptionSignal = Val(None),
+          costSignal = Val(buildTask.actionCost),
+          bonusSignal = Actions.getActionBonus(buildTask.chamberType),
+        )
+      )
     }
 
     div(
@@ -520,6 +526,7 @@ object MainForm {
     div(
       className := "m-1",
       className := "card",
+      className := "fs-5",
       width.px := ResourcesWidth,
       maxWidth.px := ResourcesWidth,
       div(
@@ -528,18 +535,21 @@ object MainForm {
       ),
       div(
         className := "card-body",
-        child.maybe <-- createResourceDiv("Sugar", sugarSignal, maxSugar, Val(true)),
+        child.maybe <-- createResourceDiv("Sugar", sugarSignal, Val(true)),
+        child.maybe <-- createResourceDiv(
+          "Tunneling Space",
+          tunnelingSpaceSignal,
+          unlocksSignal.map(_.resources.showTunnelingSpace),
+        ),
         child.maybe <-- createResourceDiv(
           "Colony Points",
           colonyPointsSignal,
-          Val(0),
-          unlocksSignal.map(_.resources.showColonyPoints).distinct,
+          unlocksSignal.map(_.resources.showColonyPoints),
         ),
         nbsp,
         child.maybe <-- createResourceDiv(
           "Eggs",
-          eggsCountSignal,
-          maxEggs,
+          eggResourceSignal,
           unlocksSignal.map(_.resources.showEggs),
           tooltipOpt = Some(
             div(
@@ -569,8 +579,7 @@ object MainForm {
         ),
         child.maybe <-- createResourceDiv(
           "Workers",
-          workersSignal,
-          maxWorkers,
+          workersResourceSignal,
           unlocksSignal.map(_.resources.showWorkers)
         ),
       )
@@ -578,15 +587,17 @@ object MainForm {
 
   private def createResourceDiv(
       name: String,
-      valueSignal: Signal[Long],
-      maxValueSignal: Signal[Long],
+      resourceSignal: Signal[BasicResource],
       showSignal: Signal[Boolean],
       tooltipOpt: Option[ReactiveHtmlElement[HTMLDivElement]] = None,
-  ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] =
-    valueSignal.combineWith(showSignal).map {
-      case (_, false) =>
+  ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
+    val amountSignal: Signal[Long] = resourceSignal.map(_.amount).distinct
+    val maxAmountSignal: Signal[Long] = resourceSignal.map(_.maxAmount).distinct
+
+    showSignal.distinct.map {
+      case false =>
         None
-      case (value, true) =>
+      case true =>
         Some(
           div(
             className := "row",
@@ -596,12 +607,12 @@ object MainForm {
             ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-3 text-end text-nowrap",
-              prettyNumberFixedSize(value),
+              child <-- amountSignal.map(prettyNumberFixedSize),
             ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-2 text-start text-body-tertiary text-nowrap ps-0",
               child <--
-                maxValueSignal.map { maxValue =>
+                maxAmountSignal.map { maxValue =>
                   if (maxValue == 0)
                     nbsp
                   else
@@ -615,6 +626,7 @@ object MainForm {
           )
         )
     }
+  }
 
   private def nestDiv(implicit owner: Owner): ReactiveHtmlElement[HTMLDivElement] = {
     def standardBuyChamber(
@@ -629,15 +641,14 @@ object MainForm {
           name = name,
           topRightBadgeSignal =
             chamberSignal.map(_.level).distinct.map(Some(_).filter(_ > 0).map(span(_))),
-          enabledSignal = Actions.buildChamberBuyEnabled,
+          enabledSignal = Val(true),
           descriptionSignal = Val(None),
           costSignal = actionCost,
           bonusSignal = Actions.getActionBonus(chamberType),
           onClickAction = _ =>
             useSignalValue[ActionCost](
               actionCost,
-              actionCost =>
-                Actions.addBuildTask(Actions.getBuildTask(chamberType, actionCost.buildPower))
+              actionCost => Actions.addBuildTask(BuildTask(chamberType, actionCost))
             ),
         )
       }
@@ -645,7 +656,7 @@ object MainForm {
     div(
       className := "row",
       actionButton(
-        name = "Gather Sugar",
+        name = GatherSugarAction,
         enabledSignal = Val(true),
         descriptionSignal = Val(None),
         costSignal = Val(ActionCost.empty),
@@ -654,7 +665,7 @@ object MainForm {
       ),
       child.maybe <-- ifUnlockedOpt(_.actions.canLayEggs) {
         actionButton(
-          name = "Lay Egg",
+          name = LayEggAction,
           topLeftBadgeSignal = modifiersMultiplierSignal.map {
             case 1    => None
             case mult => Some(span(s"x$mult"))
@@ -669,17 +680,17 @@ object MainForm {
         )
       },
       child.maybe <-- standardBuyChamber(
-        name = Constants.NestUpgradeName,
+        name = ChamberType.Nest.name,
         chamberType = ChamberType.Nest,
         unlockF = _.canBuildNestUpgrade,
       ),
       child.maybe <-- standardBuyChamber(
-        name = Constants.QueenChamberName,
+        name = ChamberType.Queen.name,
         chamberType = ChamberType.Queen,
         unlockF = _.canBuildQueenChamber,
       ),
       child.maybe <-- standardBuyChamber(
-        name = Constants.StorageChamberName,
+        name = ChamberType.FoodStorage.name,
         chamberType = ChamberType.FoodStorage,
         unlockF = _.canBuildFoodStorageChamber,
       ),
@@ -727,49 +738,57 @@ object MainForm {
           },
       ),
     ).amendThis(elem =>
-      setTooltip(
-        elem,
-        div(
-          className := "p-1",
-          child.maybe <-- descriptionSignal.map {
-            _.map { descriptionDiv =>
-              div(
-                className := "text-center",
-                maxWidth.px := 350,
-                descriptionDiv,
-                hr(),
-              )
-            }
-          },
-          child <-- costSignal.map { cost =>
+      createTooltipForActionButton(elem, descriptionSignal, costSignal, bonusSignal)
+    )
+
+  private def createTooltipForActionButton(
+      elem: ReactiveHtmlElement[HTMLElement],
+      descriptionSignal: Signal[Option[ReactiveHtmlElement[HTMLDivElement]]],
+      costSignal: Signal[ActionCost],
+      bonusSignal: Signal[ActionBonus],
+  ): EventListener[MouseEvent, MouseEvent] =
+    setTooltip(
+      elem,
+      div(
+        className := "p-1",
+        child.maybe <-- descriptionSignal.map {
+          _.map { descriptionDiv =>
             div(
-              className := "d-flex flex-column justify-content-center text-center",
-              ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
-              ifGreater0(cost.buildPower)(prettyNumberSimple("", _, " build power")),
-              ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
-              ifGreater0(cost.idleWorkers)(prettyNumberSimple("", _, " idle workers")),
+              className := "text-center",
+              maxWidth.px := 350,
+              descriptionDiv,
+              hr(),
             )
-          },
-          child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
-            if (cost == ActionCost.empty || bonus == ActionBonus.empty)
-              None
-            else
-              Some(hr())
-          },
-          child <-- bonusSignal.map { bonus =>
-            div(
-              className := "d-flex flex-column justify-content-center text-center",
-              ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
-              ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
-              ifGreater0(bonus.colonyPointsEachWorker)(
-                prettyNumberSimple("+", _, " colony points/worker/s")
-              ),
-              ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
-              ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
-              ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
-            )
-          },
-        )
+          }
+        },
+        child <-- costSignal.map { cost =>
+          div(
+            className := "d-flex flex-column justify-content-center text-center",
+            ifGreater0(cost.sugar)(prettyNumberSimple("", _, " sugar")),
+            ifGreater0(cost.tunnelingSpace)(prettyNumberSimple("", _, " tunneling space")),
+            ifGreater0(cost.colonyPoints)(prettyNumberSimple("", _, " colony points")),
+            ifGreater0(cost.idleWorkers)(prettyNumberSimple("", _, " idle workers")),
+          )
+        },
+        child.maybe <-- costSignal.combineWith(bonusSignal).map { case (cost, bonus) =>
+          if (cost == ActionCost.empty || bonus == ActionBonus.empty)
+            None
+          else
+            Some(hr())
+        },
+        child <-- bonusSignal.map { bonus =>
+          div(
+            className := "d-flex flex-column justify-content-center text-center",
+            ifGreater0(bonus.sugar)(prettyNumberSimple("+", _, " sugar")),
+            ifGreater0(bonus.eggs)(prettyNumberSimple("+", _, " eggs")),
+            ifGreater0(bonus.colonyPointsEachWorker)(
+              prettyNumberSimple("+", _, " colony points/worker/s")
+            ),
+            ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
+            ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
+            ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
+          )
+        },
       )
     )
 
@@ -797,8 +816,14 @@ object MainForm {
           div("???")
         case AntTask.Nursery =>
           div("???")
-        case AntTask.NestBuilder =>
-          div(prettyNumberSimple("+", defaultTaskBuildPowerSecond, " build power per second / ant"))
+        case AntTask.Tunneler =>
+          div(
+            prettyNumberSimple(
+              "+",
+              defaultTaskTunnelingSpaceSecond,
+              " tunneling space per second / ant"
+            )
+          )
         case AntTask.Explorer =>
           div("Ants exploring the surroundings.")
       }
@@ -811,7 +836,7 @@ object MainForm {
         antTask match {
           case AntTask.SugarCollector => "Sugar Collector"
           case AntTask.WaterCollector => "Water Collector"
-          case AntTask.NestBuilder    => "Nest Builder"
+          case AntTask.Tunneler       => "Tunneler"
           case AntTask.Nursery        => "Nursery"
           case AntTask.Explorer       => "Explorer"
         },

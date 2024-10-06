@@ -3,6 +3,7 @@ package pt.rcmartins.antidle.game
 import com.softwaremill.quicklens.ModifyPimp
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.game.saves.SaveLoad
+import pt.rcmartins.antidle.model.Chamber.ChamberType
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import pt.rcmartins.antidle.model.{AllData, AntBrood, AntTask, BuildTask}
 
@@ -37,27 +38,13 @@ object TickUpdater {
             .modify(_.statistics.maxAliveWorkers)
             .usingIf(newWorkers > 0)(_.max(allData.ants.workersCount + (newWorkers / u).toInt))
         },
-        // Ants income from tasks + build queue
+        // Ants income from tasks
         allData => {
           def countWorkers(task: AntTask): Long =
             allData.ants.tasks.find(_._1 == task).map(_._2 / u).getOrElse(0L)
 
           val sugarWorkers: Long = countWorkers(AntTask.SugarCollector)
-          val buildWorkers: Long = countWorkers(AntTask.NestBuilder)
-
-          val (updatedBuildQueue: Seq[BuildTask], finishedBuild: Option[BuildTask]) =
-            allData.nestAttributes.buildQueue match {
-              case buildTask +: otherTasks if buildWorkers > 0 =>
-                val updatedBuildTask =
-                  buildTask.useBuildPower(buildWorkers * Constants.defaultTaskBuildPowerTick)
-
-                if (updatedBuildTask.isFinished)
-                  (otherTasks, Some(updatedBuildTask))
-                else
-                  (updatedBuildTask +: otherTasks, None)
-              case other =>
-                (other, None)
-            }
+          val tunnelerWorkers: Long = countWorkers(AntTask.Tunneler)
 
           val sugarBonusMultiplier: Double =
             (if (allData.upgrades(ImproveSugarCollectorTask1).unlocked) 1.15 else 1.0) *
@@ -68,44 +55,56 @@ object TickUpdater {
             (sugarWorkers * Constants.defaultTaskCollectSugarTick * sugarBonusMultiplier).toLong
 
           val sugarToGive: Long =
-            Math.min(
-              allData.nestAttributes.maxSugar - allData.basicResources.sugar,
-              totalSugarToGain,
-            )
+            Math.min(allData.basicResources.sugar.freeSpace, totalSugarToGain)
 
           surplusSugarU += totalSugarToGain - sugarToGive
 
-          allData
-            .giveResources(sugar = sugarToGive)
-            .modify(_.nestAttributes.buildQueue)
-            .setToIf(buildWorkers > 0)(updatedBuildQueue)
-            .pipe { allData =>
-              finishedBuild match {
-                case None => allData
-                case Some(BuildTask.NestUpgrade(_)) =>
-                  allData
-                    .modify(_.nestAttributes.chambers.nestChamber.level)
-                    .using(_ + 1)
-                    .modify(_.nestAttributes.maxWorkers)
-                    .using(_ + Constants.NestUpgradeBonusMaxWorkers)
-                case Some(BuildTask.QueenChamber(_)) =>
-                  allData
-                    .modify(_.nestAttributes.chambers.queenChamber.level)
-                    .using(_ + 1)
-                    .modify(_.nestAttributes.maxEggs)
-                    .using(_ + Constants.QueenChamberBonusMaxEggs)
-                case Some(BuildTask.FoodStorageChamber(_)) =>
-                  allData
-                    .modify(_.nestAttributes.chambers.foodStorageChamber.level)
-                    .using(_ + 1)
-                    .modify(_.nestAttributes.maxSugar)
-                    .using(_ + Constants.FoodStorageChamberBonusMaxSugar)
-                case Some(BuildTask.NurseryChamber(_)) =>
-                  allData
-                    .modify(_.nestAttributes.chambers.nurseryChamber.level)
-                    .using(_ + 1)
-              }
-            }
+          val tunnelingSpaceToGive: Long =
+            tunnelerWorkers * Constants.defaultTaskTunnelingSpaceTick
+
+          allData.giveResources(
+            sugar = sugarToGive,
+            tunnelingSpace = tunnelingSpaceToGive,
+          )
+        },
+        // Build Queue update
+        allData => {
+          allData.nestAttributes.buildQueue match {
+            case finishBuilding :: otherBuildings
+                if allData.hasResources(finishBuilding.actionCost) =>
+              allData
+                .spendResources(finishBuilding.actionCost)
+                .modify(_.nestAttributes.buildQueue)
+                .setTo(otherBuildings)
+                .pipe { allData =>
+                  finishBuilding.chamberType match {
+                    case ChamberType.Nest =>
+                      allData
+                        .modify(_.nestAttributes.chambers.nestChamber.level)
+                        .using(_ + 1)
+                        .modify(_.nestAttributes.maxWorkers)
+                        .using(_ + Constants.NestUpgradeBonusMaxWorkers)
+                    case ChamberType.Queen =>
+                      allData
+                        .modify(_.nestAttributes.chambers.queenChamber.level)
+                        .using(_ + 1)
+                        .modify(_.nestAttributes.maxEggs)
+                        .using(_ + Constants.QueenChamberBonusMaxEggs)
+                    case ChamberType.FoodStorage =>
+                      allData
+                        .modify(_.nestAttributes.chambers.foodStorageChamber.level)
+                        .using(_ + 1)
+                        .modify(_.basicResources.sugar.maxAmount)
+                        .using(_ + Constants.FoodStorageChamberBonusMaxSugar)
+                    case ChamberType.Nursery =>
+                      allData
+                        .modify(_.nestAttributes.chambers.nurseryChamber.level)
+                        .using(_ + 1)
+                  }
+                }
+            case _ =>
+              allData
+          }
         },
         // Colony points update
         allData => {
@@ -134,15 +133,15 @@ object TickUpdater {
           val sugarUpkeep = allData.ants.upkeepWorkersCount * Constants.antsSugarUpkeepTick
           val sugarRemaining =
             Math.min(
-              allData.nestAttributes.maxSugar,
-              allData.basicResources.sugar + surplusSugarU - sugarUpkeep,
+              allData.basicResources.sugar.maxAmount,
+              allData.basicResources.sugar.amount + surplusSugarU - sugarUpkeep,
             )
 
           val sugarUsedFromSurplus: Long =
             Math.min(sugarUpkeep, surplusSugarU)
 
           allData
-            .modify(_.basicResources.sugar)
+            .modify(_.basicResources.sugar.amount)
             .setTo(Math.max(0, sugarRemaining))
             .modify(_.statistics.sugarU)
             .usingIf(sugarUsedFromSurplus > 0)(_.addValue(sugarUsedFromSurplus))
