@@ -2,8 +2,9 @@ package pt.rcmartins.antidle.game
 
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.codecs.StringAsIsCodec
+import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
-import org.scalajs.dom.{html, HTMLDivElement, HTMLSpanElement, MouseEvent}
+import org.scalajs.dom.{html, HTMLDivElement, HTMLElement, HTMLSpanElement, MouseEvent}
 import pt.rcmartins.antidle.main.MainForm.currentGlobalAlert
 
 import scala.scalajs.js.timers.setTimeout
@@ -13,6 +14,35 @@ object UIUtils {
   val DataBSDismissAttr: HtmlAttr[String] = htmlAttr("data-bs-dismiss", StringAsIsCodec)
   val MinAttr: HtmlAttr[String] = htmlAttr("min", StringAsIsCodec)
   val MaxAttr: HtmlAttr[String] = htmlAttr("max", StringAsIsCodec)
+  val tooltipContent: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
+  val tooltipTarget: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
+  val tooltipVisible: Var[Boolean] = Var(false)
+
+  def setTooltipOpt(
+      elem: ReactiveHtmlElement[HTMLDivElement],
+      contentOpt: Option[ReactiveHtmlElement[HTMLDivElement]],
+  ): EventListener[MouseEvent, MouseEvent] =
+    onMouseEnter --> { _ =>
+      contentOpt.foreach { content =>
+        Var.set(
+          tooltipVisible -> true,
+          tooltipTarget -> elem,
+          tooltipContent -> content,
+        )
+      }
+    }
+
+  def setTooltip(
+      elem: ReactiveHtmlElement[HTMLElement],
+      content: ReactiveHtmlElement[HTMLElement],
+  ): EventListener[MouseEvent, MouseEvent] =
+    onMouseEnter --> { _ =>
+      Var.set(
+        tooltipVisible -> true,
+        tooltipTarget -> elem,
+        tooltipContent -> content,
+      )
+    }
 
   def createShowGlobalAlertsDiv(): ReactiveHtmlElement[html.Div] = {
     def alertDiv(

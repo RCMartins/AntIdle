@@ -8,6 +8,7 @@ import org.querki.jquery
 import org.scalajs.dom
 import org.scalajs.dom._
 import pt.rcmartins.antidle.game.Constants._
+import pt.rcmartins.antidle.game.TickCalculator.prettyResourceEstDiv
 import pt.rcmartins.antidle.game.UINumbersUtils._
 import pt.rcmartins.antidle.game.UIUtils._
 import pt.rcmartins.antidle.game.Utils._
@@ -27,9 +28,6 @@ object MainForm {
 
   val currentGlobalAlert: Var[Option[String]] = Var(None)
 
-  private val tooltipContent: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
-  private val tooltipTarget: Var[ReactiveHtmlElement[HTMLElement]] = Var(div())
-  private val tooltipVisible: Var[Boolean] = Var(false)
   private val tooltipX: Var[Int] = Var(0)
   private val tooltipY: Var[Int] = Var(0)
 
@@ -52,32 +50,6 @@ object MainForm {
       .map { case (ctrl, shift) =>
         getMouseEventMultiplier(ctrl, shift)
       }
-
-  private def setTooltip(
-      elem: ReactiveHtmlElement[HTMLElement],
-      content: ReactiveHtmlElement[HTMLElement],
-  ): EventListener[MouseEvent, MouseEvent] =
-    onMouseEnter --> { _ =>
-      Var.set(
-        tooltipVisible -> true,
-        tooltipTarget -> elem,
-        tooltipContent -> content,
-      )
-    }
-
-  private def setTooltipOpt(
-      elem: ReactiveHtmlElement[HTMLDivElement],
-      contentOpt: Option[ReactiveHtmlElement[HTMLDivElement]],
-  ): EventListener[MouseEvent, MouseEvent] =
-    onMouseEnter --> { _ =>
-      contentOpt.foreach { content =>
-        Var.set(
-          tooltipVisible -> true,
-          tooltipTarget -> elem,
-          tooltipContent -> content,
-        )
-      }
-    }
 
   private val ResourcesWidth = 500
   private val NestWidth = 800
@@ -535,52 +507,62 @@ object MainForm {
       ),
       div(
         className := "card-body",
-        child.maybe <-- createResourceDiv("Sugar", sugarSignal, Val(true)),
         child.maybe <-- createResourceDiv(
-          "Tunneling Space",
-          tunnelingSpaceSignal,
-          unlocksSignal.map(_.resources.showTunnelingSpace),
+          name = "Sugar",
+          resourceSignal = sugarSignal,
+          resourceEstimationSignal =
+            Val(prettyResourceEstDiv(TickCalculator.sugarTickGain, sugarSignal)),
+          showSignal = Val(true),
         ),
         child.maybe <-- createResourceDiv(
-          "Colony Points",
-          colonyPointsSignal,
-          unlocksSignal.map(_.resources.showColonyPoints),
+          name = "Tunneling Space",
+          resourceSignal = tunnelingSpaceSignal,
+          resourceEstimationSignal =
+            Val(prettyResourceEstDiv(TickCalculator.tunnelingSpaceTickGain, tunnelingSpaceSignal)),
+          showSignal = unlocksSignal.map(_.resources.showTunnelingSpace),
+        ),
+        child.maybe <-- createResourceDiv(
+          name = "Colony Points",
+          resourceSignal = colonyPointsSignal,
+          resourceEstimationSignal = Val(div()),
+          showSignal = unlocksSignal.map(_.resources.showColonyPoints),
         ),
         nbsp,
         child.maybe <-- createResourceDiv(
-          "Eggs",
-          eggResourceSignal,
-          unlocksSignal.map(_.resources.showEggs),
+          name = "Eggs",
+          resourceSignal = eggResourceSignal,
+          resourceEstimationSignal = Val(div()),
+          showSignal = unlocksSignal.map(_.resources.showEggs),
           tooltipOpt = Some(
             div(
               child <--
-                antsSignal
-                  .map(_.eggsAndLarvae)
-                  .combineWith(currentTickSignal)
-                  .map {
-                    case (Seq(), _) =>
-                      "No eggs"
-                    case (seq, currentTick) =>
-                      div(
-                        seq
-                          .map { antBlood =>
-                            div(
-                              b(antBlood.name + ": "),
+                antsSignal.map(_.eggsAndLarvae).map {
+                  case Seq() =>
+                    "No eggs"
+                  case seq =>
+                    div(
+                      seq
+                        .map { antBlood =>
+                          div(
+                            b(antBlood.name + ": "),
+                            child <-- currentTickSignal.map { currentTick =>
                               prettyTimeFromTicks(
                                 (antBlood.initialTick + AntBrood.defaultTicksToGrow) - currentTick
-                              ),
-                              " to grow to next stage."
-                            )
-                          }
-                      )
-                  }
+                              )
+                            },
+                            " to grow to next stage."
+                          )
+                        }
+                    )
+                }
             )
           ),
         ),
         child.maybe <-- createResourceDiv(
-          "Workers",
-          workersResourceSignal,
-          unlocksSignal.map(_.resources.showWorkers)
+          name = "Workers",
+          resourceSignal = workersResourceSignal,
+          resourceEstimationSignal = Val(div()),
+          showSignal = unlocksSignal.map(_.resources.showWorkers)
         ),
       )
     )
@@ -588,6 +570,7 @@ object MainForm {
   private def createResourceDiv(
       name: String,
       resourceSignal: Signal[BasicResource],
+      resourceEstimationSignal: Signal[ReactiveHtmlElement[HTMLDivElement]],
       showSignal: Signal[Boolean],
       tooltipOpt: Option[ReactiveHtmlElement[HTMLDivElement]] = None,
   ): Signal[Option[ReactiveHtmlElement[HTMLDivElement]]] = {
@@ -621,7 +604,7 @@ object MainForm {
             ).amendThis(elem => setTooltipOpt(elem, tooltipOpt)),
             div(
               className := "col-3 text-end text-nowrap",
-              nbsp,
+              child <-- resourceEstimationSignal
             )
           )
         )
@@ -812,10 +795,6 @@ object MainForm {
       antTask match {
         case AntTask.SugarCollector =>
           div(prettyNumberSimple("+", defaultTaskCollectSugarSecond, " sugar per second / ant"))
-        case AntTask.WaterCollector =>
-          div("???")
-        case AntTask.Nursery =>
-          div("???")
         case AntTask.Tunneler =>
           div(
             prettyNumberSimple(
@@ -833,13 +812,7 @@ object MainForm {
       className := "row",
       span(
         className := "col-6",
-        antTask match {
-          case AntTask.SugarCollector => "Sugar Collector"
-          case AntTask.WaterCollector => "Water Collector"
-          case AntTask.Tunneler       => "Tunneler"
-          case AntTask.Nursery        => "Nursery"
-          case AntTask.Explorer       => "Explorer"
-        },
+        antTask.name,
         nbsp,
         "(",
         child <-- amountSignal.map(prettyNumberInt),
