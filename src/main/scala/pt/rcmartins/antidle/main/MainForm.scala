@@ -524,7 +524,8 @@ object MainForm {
         child.maybe <-- createResourceDiv(
           name = "Colony Points",
           resourceSignal = colonyPointsSignal,
-          resourceEstimationSignal = Val(div()),
+          resourceEstimationSignal =
+            Val(prettyResourceEstDiv(TickCalculator.colonyPointsTickGain, colonyPointsSignal)),
           showSignal = unlocksSignal.map(_.resources.showColonyPoints),
         ),
         nbsp,

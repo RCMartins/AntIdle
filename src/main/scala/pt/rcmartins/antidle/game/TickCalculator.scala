@@ -89,6 +89,22 @@ object TickCalculator {
         ).flatten
       }
 
+  val colonyPointsTickGain: Signal[List[BonusOrigin]] =
+    antsSignal
+      .map(_.workersCount)
+      .distinct
+      .combineWith(chambersSignal.map(_.nestChamber.level).distinct)
+      .map { case (workersCount, nestChamberLevel) =>
+        List(
+          Some(
+            ResourceOrigin(
+              "Workers",
+              nestChamberLevel * workersCount * defaultNestLevelColonyPointsTick,
+            )
+          ),
+        ).flatten
+      }
+
   // TODO show <diff color> when full ? -> orange maybe?
   def prettyResourceEstDiv(
       listSignal: Signal[List[BonusOrigin]],
