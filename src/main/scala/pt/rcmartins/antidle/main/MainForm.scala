@@ -426,7 +426,7 @@ object MainForm {
       span(
         buildTask.chamberType.name,
         " [",
-        "???", // TODO calculateTicksToResources(buildTask.actionCost).map(prettyTimeFromTicks),
+        TickCalculator.calculateTicksToResources(buildTask.actionCost),
         "]",
       ).amendThis(elem =>
         createTooltipForActionButton(
@@ -542,18 +542,17 @@ object MainForm {
                     "No eggs"
                   case seq =>
                     div(
-                      seq
-                        .map { antBlood =>
-                          div(
-                            b(antBlood.name + ": "),
-                            child <-- currentTickSignal.map { currentTick =>
-                              prettyTimeFromTicks(
-                                (antBlood.initialTick + AntBrood.defaultTicksToGrow) - currentTick
-                              )
-                            },
-                            " to grow to next stage."
-                          )
-                        }
+                      seq.map { antBlood =>
+                        div(
+                          b(antBlood.name + ": "),
+                          child <-- currentTickSignal.map { currentTick =>
+                            prettyTimeFromTicks(
+                              (antBlood.initialTick + AntBrood.defaultTicksToGrow) - currentTick
+                            )
+                          },
+                          " to grow to next stage."
+                        )
+                      }
                     )
                 }
             )

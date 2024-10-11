@@ -7,7 +7,7 @@ import pt.rcmartins.antidle.game.Constants._
 import pt.rcmartins.antidle.game.TickCalculator.BonusOrigin.{PercentOrigin, ResourceOrigin}
 import pt.rcmartins.antidle.game.UIUtils.setTooltip
 import pt.rcmartins.antidle.game.Utils._
-import pt.rcmartins.antidle.model.AntTask
+import pt.rcmartins.antidle.model.{ActionCost, AntTask}
 import pt.rcmartins.antidle.model.BasicResources.BasicResource
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 
@@ -139,6 +139,47 @@ object TickCalculator {
           )
         }
     ).amendThis(elem => setTooltip(elem, prettyResourceTooltip(listSignal, sumUSignal, resource)))
+  }
+
+//  private def
+//
+//  Seq(
+//                   actionCost.sugar -> sugarTickGain,
+//  actionCost.tunnelingSpace -> tunnelingSpaceTickGain,
+//  actionCost.colonyPoints -> colonyPointsTickGain,
+//  )
+
+  /*
+
+  Max known locations (bonus from exploration). (Default 3)
+    -> add more with upgrades
+    -> longer explorations (+15 sec?) -> More sugar / ant also?
+
+    -> Have to do a few explorations to unlocks the upgrades? (so that they even show in the tab?)
+
+
+
+   */
+
+  def calculateTicksToResources(
+      actionCost: ActionCost,
+  ): ReactiveHtmlElement[HTMLDivElement] = {
+    val targetValue = actionCost.sugar
+    if (targetValue > 0)
+      sugarSignal.combineWith(sugarTickGain).map { case (resource, tickValue) =>
+        val remaining:Long = targetValue - resource.amount
+        if (remaining <= 0)
+          0
+        else if (tickValue <= 0)
+          -1
+        else {
+          val timeToFull: Long = resource.freeSpace / sumU
+          if (timeToFull == 0)
+            "0s"
+          else
+            s"${UINumbersUtils.prettyTimeFromTicks(timeToFull)}"
+        }
+      }
   }
 
   // TODO some colors= green for positive, red for negative, orange for 0 ?
