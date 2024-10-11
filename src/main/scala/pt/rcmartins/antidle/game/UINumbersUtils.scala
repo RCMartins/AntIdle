@@ -32,7 +32,7 @@ object UINumbersUtils {
           prefix,
           (shortValue / 100).toString,
           ".",
-          f"${shortValue % 100}%02d",
+          f"${Math.abs(shortValue) % 100}%02d",
           if (suffixNum == 0) span(opacity := 0, "K") else Suffixes(suffixNum),
         )
       }
@@ -43,7 +43,7 @@ object UINumbersUtils {
     prettyNumberStr("", num, 0)
 
   @tailrec
-  private def prettyNumberStr(
+  def prettyNumberStr(
       prefix: String,
       num: Long,
       suffix: Int,
@@ -56,7 +56,7 @@ object UINumbersUtils {
         prefix +
           (shortValue / 100).toString +
           "." +
-          f"${shortValue % 100}%02d" +
+          f"${Math.abs(shortValue) % 100}%02d" +
           Suffixes(suffix)
       }
     else
@@ -88,7 +88,7 @@ object UINumbersUtils {
           prefix,
           (shortValue / 100).toString,
           ".",
-          f"${shortValue % 100}%02d",
+          f"${Math.abs(shortValue) % 100}%02d",
           Suffixes(suffixNum),
           suffixStr,
         )
@@ -109,20 +109,20 @@ object UINumbersUtils {
     val months = days / 30
     val years = days / 365
 
-    if (years > 0)
-      f"$years year${plural(years)}"
-    else if (months > 0)
-      f"$months month${plural(months)}"
-    else if (weeks > 0)
-      f"$weeks week${plural(weeks)}"
-    else if (days > 0)
-      f"$days day${plural(days)}"
-    else if (hours > 0)
-      f"$hours hour${plural(hours)}"
-    else if (minutes > 0)
-      f"$minutes minute${plural(minutes)}"
+    if (years != 0)
+      if (months > 0) s"${years}y ${months % 12}m" else s"${years}y"
+    else if (months != 0)
+      if (weeks > 0) s"${months}m ${weeks % 4}w" else s"${months}m"
+    else if (weeks != 0)
+      if (days > 0) s"${weeks}w ${days % 7}d" else s"${weeks}w"
+    else if (days != 0)
+      if (hours > 0) s"${days}d ${hours % 24}h" else s"${days}d"
+    else if (hours != 0)
+      if (minutes > 0) s"${hours}h ${minutes % 60}m" else s"${hours}h"
+    else if (minutes != 0)
+      if (seconds > 0) s"${minutes}m ${seconds % 60}s" else s"${minutes}m"
     else
-      f"$seconds.$dSeconds seconds"
+      s"$seconds.${dSeconds}s"
   }
 
   def plural(seconds: Long): String = if (seconds != 1) "s" else ""

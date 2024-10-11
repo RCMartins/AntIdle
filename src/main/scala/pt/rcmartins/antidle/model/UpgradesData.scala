@@ -2,7 +2,6 @@ package pt.rcmartins.antidle.model
 
 import pt.rcmartins.antidle.game.Constants.u
 import pt.rcmartins.antidle.model.UpgradesData.UpgradeType
-import pt.rcmartins.antidle.model.UpgradesData.UpgradeType._
 import zio.json._
 
 case class UpgradesData(
@@ -84,7 +83,7 @@ object UpgradesData {
     implicit val decoder: JsonDecoder[UpgradeType] = DeriveJsonDecoder.gen[UpgradeType]
     implicit val encoder: JsonEncoder[UpgradeType] = DeriveJsonEncoder.gen[UpgradeType]
 
-  val all: Seq[UpgradeType] = Seq(
+    val all: Seq[UpgradeType] = Seq(
       UnlockQueensChamber,
       ImproveSugarCollectorTask1,
       ImproveSugarCollectorTask2,

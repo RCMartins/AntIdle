@@ -76,4 +76,6 @@ object Constants {
 
   val MaxExplorationParties: Int = 1
 
+  val SugarImprovementBonusPerc: Double = 1.15
+
 }
