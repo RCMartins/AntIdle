@@ -70,6 +70,13 @@ object Actions {
         allData
     }
 
+  def removeBuildTask(index: Int): Unit =
+    actionUpdater.writer.onNext { allData =>
+      allData
+        .modify(_.nestAttributes.buildQueue)
+        .using(_.patch(index, Nil, 1))
+    }
+
   def unlockUpgrade(actionCost: ActionCost, unlockAction: UpgradesData => UpgradesData): Unit =
     actionUpdater.writer.onNext { allData =>
       allData

@@ -422,12 +422,13 @@ object MainForm {
   }
 
   private def buildQueueDiv: ReactiveHtmlElement[HTMLDivElement] = {
-    def buildTaskName(buildTask: BuildTask): ReactiveHtmlElement[HTMLSpanElement] = {
+    def buildTaskName(buildTask: BuildTask, index: Int): ReactiveHtmlElement[HTMLSpanElement] = {
       span(
         buildTask.chamberType.name,
         " [",
         TickCalculator.calculateTicksToResources(buildTask.actionCost),
         "]",
+        onClick --> { _ => Actions.removeBuildTask(index) },
       ).amendThis(elem =>
         createTooltipForActionButton(
           elem = elem,
@@ -461,8 +462,12 @@ object MainForm {
         div(
           className := "d-grid gap-2",
           child <-- buildQueueSignal.map {
-            case Seq() => span(nbsp)
-            case seq   => span(seq.map(buildTask => buildTaskName(buildTask)))
+            case Seq() =>
+              span(nbsp)
+            case seq =>
+              span(seq.zipWithIndex.map { case (buildTask, index) =>
+                buildTaskName(buildTask, index)
+              })
           }
         )
       )

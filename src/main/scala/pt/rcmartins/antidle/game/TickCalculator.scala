@@ -39,96 +39,110 @@ object TickCalculator {
 
   }
 
+  case class BonusOriginGroup(
+      bonusListSignal: Signal[List[BonusOrigin]],
+  ) {
+
+    val sum: Signal[Long] = {
+      @tailrec
+      def calcLoop(list: List[BonusOrigin], sum: Long): Long =
+        list match {
+          case Nil =>
+            sum
+          case head :: tail =>
+            head match {
+              case ResourceOrigin(_, resourceTickU) =>
+                calcLoop(tail, sum + resourceTickU)
+              case PercentOrigin(_, percent) =>
+                calcLoop(tail, (sum * percent).toLong)
+            }
+        }
+
+      bonusListSignal.map(calcLoop(_, 0L))
+    }
+
+  }
+
   private def antTaskCountSignal(antTask: AntTask): Signal[Long] =
     antsSignal.map(_.tasks.find(_._1 == antTask).map(_._2 / u).getOrElse(0L)).distinct
 
-  val sugarTickGain: Signal[List[BonusOrigin]] =
-    antTaskCountSignal(AntTask.SugarCollector)
-      .combineWith(
-        upgradesSignal,
-        antsSignal.map(_.upkeepWorkersCount).distinct,
-      )
-      .map {
-        case (
-              sugarCollectorAmount,
-              upgrades,
-              upkeepWorkersCount
-            ) =>
+  val sugarTickGain: BonusOriginGroup =
+    BonusOriginGroup(
+      antTaskCountSignal(AntTask.SugarCollector)
+        .combineWith(
+          upgradesSignal,
+          antsSignal.map(_.upkeepWorkersCount).distinct,
+        )
+        .map {
+          case (
+                sugarCollectorAmount,
+                upgrades,
+                upkeepWorkersCount
+              ) =>
+            List(
+              Some(
+                ResourceOrigin(
+                  AntTask.SugarCollector.name,
+                  sugarCollectorAmount * defaultTaskCollectSugarTick,
+                )
+              ),
+              Some(PercentOrigin(ImproveSugarCollectorTask1.title, SugarImprovementBonusPerc))
+                .filter(_ => upgrades(ImproveSugarCollectorTask1).unlocked),
+              Some(PercentOrigin(ImproveSugarCollectorTask2.title, SugarImprovementBonusPerc))
+                .filter(_ => upgrades(ImproveSugarCollectorTask2).unlocked),
+              Some(PercentOrigin(ImproveSugarCollectorTask3.title, SugarImprovementBonusPerc))
+                .filter(_ => upgrades(ImproveSugarCollectorTask3).unlocked),
+              Some(
+                ResourceOrigin(
+                  "Ants Demand",
+                  -upkeepWorkersCount * antsSugarUpkeepTick,
+                )
+              ),
+            ).flatten
+        }
+    )
+
+  val tunnelingSpaceTickGain: BonusOriginGroup =
+    BonusOriginGroup(
+      antTaskCountSignal(AntTask.Tunneler)
+        .map { tunnelersAmount =>
           List(
             Some(
               ResourceOrigin(
-                AntTask.SugarCollector.name,
-                sugarCollectorAmount * defaultTaskCollectSugarTick,
-              )
-            ),
-            Some(PercentOrigin(ImproveSugarCollectorTask1.title, SugarImprovementBonusPerc))
-              .filter(_ => upgrades(ImproveSugarCollectorTask1).unlocked),
-            Some(PercentOrigin(ImproveSugarCollectorTask2.title, SugarImprovementBonusPerc))
-              .filter(_ => upgrades(ImproveSugarCollectorTask2).unlocked),
-            Some(PercentOrigin(ImproveSugarCollectorTask3.title, SugarImprovementBonusPerc))
-              .filter(_ => upgrades(ImproveSugarCollectorTask3).unlocked),
-            Some(
-              ResourceOrigin(
-                "Ants Demand",
-                -upkeepWorkersCount * antsSugarUpkeepTick,
+                AntTask.Tunneler.name,
+                tunnelersAmount * defaultTaskTunnelingSpaceTick,
               )
             ),
           ).flatten
-      }
+        }
+    )
 
-  val tunnelingSpaceTickGain: Signal[List[BonusOrigin]] =
-    antTaskCountSignal(AntTask.Tunneler)
-      .map { tunnelersAmount =>
-        List(
-          Some(
-            ResourceOrigin(
-              AntTask.Tunneler.name,
-              tunnelersAmount * defaultTaskTunnelingSpaceTick,
-            )
-          ),
-        ).flatten
-      }
-
-  val colonyPointsTickGain: Signal[List[BonusOrigin]] =
-    antsSignal
-      .map(_.workersCount)
-      .distinct
-      .combineWith(chambersSignal.map(_.nestChamber.level).distinct)
-      .map { case (workersCount, nestChamberLevel) =>
-        List(
-          Some(
-            ResourceOrigin(
-              "Workers",
-              nestChamberLevel * workersCount * defaultNestLevelColonyPointsTick,
-            )
-          ),
-        ).flatten
-      }
+  val colonyPointsTickGain: BonusOriginGroup =
+    BonusOriginGroup(
+      antsSignal
+        .map(_.workersCount)
+        .distinct
+        .combineWith(chambersSignal.map(_.nestChamber.level).distinct)
+        .map { case (workersCount, nestChamberLevel) =>
+          List(
+            Some(
+              ResourceOrigin(
+                "Workers",
+                nestChamberLevel * workersCount * defaultNestLevelColonyPointsTick,
+              )
+            ),
+          ).flatten
+        }
+    )
 
   // TODO show <diff color> when full ? -> orange maybe?
   def prettyResourceEstDiv(
-      listSignal: Signal[List[BonusOrigin]],
+      bonusGroup: BonusOriginGroup,
       resource: Signal[BasicResource],
   ): ReactiveHtmlElement[HTMLDivElement] = {
-    @tailrec
-    def calcLoop(list: List[BonusOrigin], sum: Long): Long =
-      list match {
-        case Nil =>
-          sum
-        case head :: tail =>
-          head match {
-            case ResourceOrigin(_, resourceTickU) =>
-              calcLoop(tail, sum + resourceTickU)
-            case PercentOrigin(_, percent) =>
-              calcLoop(tail, (sum * percent).toLong)
-          }
-      }
-
-    val sumUSignal: Signal[Long] = listSignal.map(calcLoop(_, 0L))
-
     div(
       child <--
-        sumUSignal.map { sumU =>
+        bonusGroup.sum.map { sumU =>
           val useMinutes: Boolean = Math.abs(sumU) < 20
           val minutesMultiplier: Int = if (useMinutes) 60 else 1
 
@@ -138,58 +152,73 @@ object TickCalculator {
             if (useMinutes) "/m" else "/s",
           )
         }
-    ).amendThis(elem => setTooltip(elem, prettyResourceTooltip(listSignal, sumUSignal, resource)))
+    ).amendThis(elem =>
+      setTooltip(elem, prettyResourceTooltip(bonusGroup, bonusGroup.sum, resource))
+    )
   }
-
-//  private def
-//
-//  Seq(
-//                   actionCost.sugar -> sugarTickGain,
-//  actionCost.tunnelingSpace -> tunnelingSpaceTickGain,
-//  actionCost.colonyPoints -> colonyPointsTickGain,
-//  )
-
-  /*
-
-  Max known locations (bonus from exploration). (Default 3)
-    -> add more with upgrades
-    -> longer explorations (+15 sec?) -> More sugar / ant also?
-
-    -> Have to do a few explorations to unlocks the upgrades? (so that they even show in the tab?)
-
-
-
-   */
 
   def calculateTicksToResources(
       actionCost: ActionCost,
-  ): ReactiveHtmlElement[HTMLDivElement] = {
-    val targetValue = actionCost.sugar
-    if (targetValue > 0)
-      sugarSignal.combineWith(sugarTickGain).map { case (resource, tickValue) =>
-        val remaining:Long = targetValue - resource.amount
-        if (remaining <= 0)
-          0
-        else if (tickValue <= 0)
-          -1
-        else {
-          val timeToFull: Long = resource.freeSpace / sumU
-          if (timeToFull == 0)
-            "0s"
+  ): ReactiveHtmlElement[HTMLElement] = {
+    def getTicksRemaining(
+        filter: ActionCost => Long,
+        currentResource: Signal[BasicResource],
+        resourceGainTickSignal: BonusOriginGroup,
+    ): Signal[Long] = {
+      val targetValue: Long = filter(actionCost)
+      if (targetValue > 0)
+        currentResource.combineWith(resourceGainTickSignal.sum).map { case (resource, valueTick) =>
+          val remaining: Long = targetValue - resource.amount
+          if (remaining <= 0)
+            0
+          else if (valueTick <= 0 || targetValue > resource.maxAmount)
+            -1
           else
-            s"${UINumbersUtils.prettyTimeFromTicks(timeToFull)}"
+            remaining / valueTick
         }
-      }
+      else
+        Val(0)
+    }
+
+    val allResourcesNeeded: Seq[Signal[Long]] =
+      Seq(
+        getTicksRemaining(_.sugar, sugarSignal, sugarTickGain),
+        getTicksRemaining(_.tunnelingSpace, tunnelingSpaceSignal, tunnelingSpaceTickGain),
+        getTicksRemaining(_.colonyPoints, colonyPointsSignal, colonyPointsTickGain),
+      )
+
+    span(
+      child <--
+        Signal
+          .sequence(
+            allResourcesNeeded
+          )
+          .map { ticksSeq =>
+            println(ticksSeq)
+            if (ticksSeq.exists(_ < 0))
+              -1
+            else
+              ticksSeq.max
+          }
+          .map {
+            case -1 =>
+              "Never"
+            case 0 =>
+              "0s"
+            case ticks =>
+              s"${UINumbersUtils.prettyTimeFromTicks(ticks)}"
+          }
+    )
   }
 
   // TODO some colors= green for positive, red for negative, orange for 0 ?
   private def prettyResourceTooltip(
-      listSignal: Signal[List[BonusOrigin]],
+      bonusGroup: BonusOriginGroup,
       sumSignal: Signal[Long],
       resource: Signal[BasicResource],
   ): ReactiveHtmlElement[HTMLDivElement] =
     div(
-      children <-- listSignal.map {
+      children <-- bonusGroup.bonusListSignal.map {
         _.map { bonusOrigin =>
           div(
             className := "d-flex justify-content-between",
