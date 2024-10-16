@@ -6,12 +6,12 @@ import zio.json._
 case class NestAttributes(
     chambers: AllChamberData = AllChamberData(),
     buildQueue: List[BuildTask] = Nil,
-//    dirt: Long = 0,
-//    deadAnts: Long = 0,
-//    detritus: Long = 0,
-    maxEggs: Long = QueenChamberBonusMaxEggs,
-    maxWorkers: Long = NestUpgradeBonusMaxWorkers,
-    maxBuildQueue: Int = 1,
+    //    dirt: Long = 0,
+    //    deadAnts: Long = 0,
+    //    detritus: Long = 0,
+    maxEggs: Long = InitialMaxEggs,
+    maxWorkers: Long = InitialMaxWorkers,
+    maxBuildQueue: Int = InitialMaxBuildQueue,
 ) {
 
   def maxEggsCount: Int = (maxEggs / u).toInt

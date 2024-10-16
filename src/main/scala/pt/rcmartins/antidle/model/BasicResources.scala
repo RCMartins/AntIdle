@@ -1,6 +1,6 @@
 package pt.rcmartins.antidle.model
 
-import pt.rcmartins.antidle.game.Constants.u
+import pt.rcmartins.antidle.game.Constants
 import pt.rcmartins.antidle.model.BasicResources.BasicResource
 import zio.json._
 
@@ -39,9 +39,9 @@ object BasicResources {
   implicit val encoder: JsonEncoder[BasicResources] = DeriveJsonEncoder.gen[BasicResources]
 
   val initial: BasicResources = BasicResources(
-    sugar = BasicResource(0L, 1000 * u),
-    tunnelingSpace = BasicResource(0L, 1000 * u),
-    colonyPoints = BasicResource(0L, 2000 * u),
+    sugar = BasicResource(0L, Constants.InitialMaxSugar),
+    tunnelingSpace = BasicResource(0L, Constants.InitialMaxTunnelingSpace),
+    colonyPoints = BasicResource(0L, Constants.InitialMaxColonyPoints),
   )
 
   case class BasicResource(amount: Long, maxAmount: Long) {

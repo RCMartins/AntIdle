@@ -648,7 +648,7 @@ object MainForm {
         enabledSignal = Val(true),
         descriptionSignal = Val(None),
         costSignal = Val(ActionCost.empty),
-        bonusSignal = Val(ActionBonus(sugar = 1 * u)),
+        bonusSignal = Val(ActionBonus(sugar = Constants.InitialGatherSugarAmount)),
         onClickAction = _ => giveResources(sugar = PlayerGatherSugarClickAmount),
       ),
       child.maybe <-- ifUnlockedOpt(_.actions.canLayEggs) {
@@ -907,7 +907,7 @@ object MainForm {
           name = name,
           enabledSignal = hasResourcesSignal(costSignal).combineWith(explorationSignal).map {
             case (hasResources, exploration) =>
-              hasResources && exploration.explorationParties.sizeIs < Constants.MaxExplorationParties
+              hasResources && exploration.explorationParties.sizeIs < Constants.InitialMaxExplorationParties
           },
           descriptionSignal = description,
           costSignal = costSignal,
@@ -955,7 +955,10 @@ object MainForm {
         name = "Explore Surroundings",
         Val(true),
         amountOfExplorersVar.signal.map(amount =>
-          ActionCost(sugar = amount * 10, idleWorkers = amount)
+          ActionCost(
+            sugar = amount * Constants.InitialExplorationSugarCostPerWorker,
+            idleWorkers = amount,
+          )
         ),
         description = Val(Some(div("Send explorer ants out exploring the nest surroundings."))),
       ),
@@ -964,7 +967,7 @@ object MainForm {
         "Number of exploration parties: ",
         child <-- explorationSignal.map(_.explorationParties.size),
         " / ",
-        b(Constants.MaxExplorationParties),
+        b(child.text <-- explorationSignal.map(_.maxExplorationsParties).distinct),
       ),
       div(
         className := "col-12 pt-3 d-grid",

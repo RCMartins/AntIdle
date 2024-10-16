@@ -26,8 +26,6 @@ object Constants {
   private def tickAndSeconds(perSecondValue: Long): (Long, Long) =
     (perSecondValue / TicksPerSecond, perSecondValue)
 
-  def ExplorationTimeTicks: Long = 15 * TicksPerSecond
-
   // Other Constants
 
   @inline final val u: Long = 10000L
@@ -53,10 +51,6 @@ object Constants {
   val (antsSugarUpkeepTick: Long, antsSugarUpkeepSecond: Long) =
     tickAndSeconds(perSecondValue = (0.2 * u).toLong)
 
-  val NestUpgradeBonusMaxWorkers: Long = 5 * u
-  val QueenChamberBonusMaxEggs: Long = 2 * u
-  val FoodStorageChamberBonusMaxSugar: Long = 1000 * u
-
   val AntDeathRiskThreshold: Long = 10 * u
 
   val GatherSugarAction = "Gather Sugar"
@@ -74,8 +68,31 @@ object Constants {
     }
   }
 
-  val MaxExplorationParties: Int = 1
-
   val SugarImprovementBonusPerc: Double = 1.15
+
+  // Start Max Resource Values
+
+  val InitialMaxSugar: Long = 1000 * u
+  val InitialMaxTunnelingSpace: Long = 1000 * u
+  val InitialMaxColonyPoints: Long = 2000 * u
+
+  // Start Nest Attributes
+
+  val InitialGatherSugarAmount: Long = 1 * u
+  val InitialMaxWorkers: Long = 10 * u
+  val InitialMaxEggs: Long = 1 * u
+  val InitialMaxBuildQueue: Int = 1
+  val InitialMaxExplorationParties: Int = 1
+
+  // Nest Upgrades Bonuses
+
+  val NestUpgradeBonusMaxWorkers: Long = 5 * u
+  val QueenChamberBonusMaxEggs: Long = 1 * u
+  val FoodStorageChamberBonusMaxSugar: Long = 1000 * u
+
+  // Exploration Constants
+
+  val InitialExplorationSugarCostPerWorker: Long = 5 * u
+  def InitialExplorationTimeTicks: Long = 15 * TicksPerSecond
 
 }

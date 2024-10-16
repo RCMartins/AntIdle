@@ -133,7 +133,7 @@ object Actions {
             ExplorationParty.create(
               actionCost.idleWorkers,
               allData.world.currentTick,
-              Constants.ExplorationTimeTicks,
+              Constants.InitialExplorationTimeTicks,
             ) :: _
           )
           .modify(_.statistics.explorationsCount)
