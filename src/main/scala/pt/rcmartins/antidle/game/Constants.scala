@@ -1,5 +1,6 @@
 package pt.rcmartins.antidle.game
 
+import pt.rcmartins.antidle.model.ActionCost
 import pt.rcmartins.antidle.model.Chamber.ChamberType
 
 object Constants {
@@ -53,8 +54,9 @@ object Constants {
 
   val AntDeathRiskThreshold: Long = 10 * u
 
-  val GatherSugarAction = "Gather Sugar"
+  val FeedQueenAction = "Feed Queen"
   val LayEggAction = "Lay Egg"
+  val GatherSugarAction = "Gather Sugar"
 
   def getChamberTunnelingSpaceNeeded(chamberType: ChamberType, level: Int): Long = {
     def cost(base: Long, multiplier: IndexedSeq[Double]): Long =
@@ -70,6 +72,11 @@ object Constants {
 
   val SugarImprovementBonusPerc: Double = 1.15
 
+  // Early Game Constants
+
+  val InitialGatherSugarAmount: Long = 1 * u
+  val InitialFeedQueenActionCost: ActionCost = ActionCost(sugar = 10 * u)
+
   // Start Max Resource Values
 
   val InitialMaxSugar: Long = 1000 * u
@@ -78,7 +85,6 @@ object Constants {
 
   // Start Nest Attributes
 
-  val InitialGatherSugarAmount: Long = 1 * u
   val InitialMaxWorkers: Long = 10 * u
   val InitialMaxEggs: Long = 1 * u
   val InitialMaxBuildQueue: Int = 1

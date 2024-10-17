@@ -17,11 +17,13 @@ object UnlockUtils {
     unlockSubscription[BasicResource](
       sugarSignal,
       _ >= 5 * u,
-      _ =>
+      _ => {
         Var.update(
-          unlocksData -> ((_: Unlocks).modify(_.actions.canLayEggs).setTo(true)),
-        ),
-      initialAllData.unlocks.actions.canLayEggs,
+          unlocksData -> ((_: Unlocks).modify(_.actions.canFeedQueen).setTo(true)),
+        )
+        addMessage("Our Queen is starving. We should feed her.")
+      },
+      initialAllData.unlocks.actions.canFeedQueen,
     )
 
     unlockSubscription[AntsData](

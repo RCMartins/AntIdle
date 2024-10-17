@@ -266,6 +266,9 @@ object Utils {
   def ifGreater0[A](compareValue: Long)(func: Long => A): Option[A] =
     if (compareValue == 0) None else Some(func(compareValue))
 
+  def ifNonEmpty[A](compareValue: String)(func: String => A): Option[A] =
+    if (compareValue.isEmpty) None else Some(func(compareValue))
+
   def useSignalValue[A](signal: Signal[A], action: A => Unit)(implicit owner: Owner): Unit = {
     val eventBus: EventBus[Unit] = new EventBus
 

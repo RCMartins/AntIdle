@@ -7,6 +7,7 @@ case class ActionBonus(
     maxSugar: Long = 0L,
     maxEggs: Long = 0L,
     maxWorkers: Long = 0L,
+    customText: String = "",
 )
 
 object ActionBonus {

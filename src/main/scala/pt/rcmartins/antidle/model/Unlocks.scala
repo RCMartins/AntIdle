@@ -19,6 +19,7 @@ object Unlocks {
   val initial: Unlocks = Unlocks()
 
   case class ActionUnlocks(
+      canFeedQueen: Boolean = false,
       canLayEggs: Boolean = false,
       canBuildNestUpgrade: Boolean = false,
       canBuildQueenChamber: Boolean = false,

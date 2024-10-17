@@ -4,6 +4,7 @@ import com.raquo.airstream.ownership.OneTimeOwner
 import com.raquo.laminar.api.L.{u => _, _}
 import com.raquo.laminar.modifiers.EventListener
 import com.raquo.laminar.nodes.ReactiveHtmlElement
+import com.softwaremill.quicklens.ModifyPimp
 import org.querki.jquery
 import org.scalajs.dom
 import org.scalajs.dom._
@@ -651,6 +652,18 @@ object MainForm {
         bonusSignal = Val(ActionBonus(sugar = Constants.InitialGatherSugarAmount)),
         onClickAction = _ => giveResources(sugar = PlayerGatherSugarClickAmount),
       ),
+      child.maybe <-- ifUnlockedOpt(unlocks =>
+        unlocks.actions.canFeedQueen && !unlocks.actions.canLayEggs
+      ) {
+        actionButton(
+          name = FeedQueenAction,
+          enabledSignal = hasResourcesSignal(Val(Constants.InitialFeedQueenActionCost)),
+          descriptionSignal = Val(Some(div("Feed the queen to lay eggs."))),
+          costSignal = Val(Constants.InitialFeedQueenActionCost),
+          bonusSignal = Val(ActionBonus(customText = "Unlocks Lay Egg action")),
+          onClickAction = _ => unlocksData.update(_.modify(_.actions.canLayEggs).setTo(true)),
+        )
+      },
       child.maybe <-- ifUnlockedOpt(_.actions.canLayEggs) {
         actionButton(
           name = LayEggAction,
@@ -775,6 +788,7 @@ object MainForm {
             ifGreater0(bonus.maxSugar)(prettyNumberSimple("+", _, " max sugar")),
             ifGreater0(bonus.maxEggs)(prettyNumberSimple("+", _, " max eggs")),
             ifGreater0(bonus.maxWorkers)(prettyNumberSimple("+", _, " max workers")),
+            ifNonEmpty(bonus.customText)(text => div(i(text))),
           )
         },
       )
